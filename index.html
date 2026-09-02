@@ -563,7 +563,7 @@
       satelite: satelite,
       entrega: document.getElementById('personaEntrega').value.trim() || 'No especificado',
       observaciones: document.getElementById('obs').value.trim() || 'Ninguna',
-      productos: listaProductos
+      productos: listaProductos // Se encarga de enviar el array con [{nombre, cantidad, precio}, ...]
     };
   }
 
@@ -598,7 +598,7 @@
       if (esBrayan && p.precio > 0) {
         const sub = p.cantidad * p.precio;
         totalManoObra += sub;
-        texto += `• ${p.nombre}: *${p.cantidad*//* unids *//*}* ($${p.precio.toLocaleString('es-CO')} c/u = *$${sub.toLocaleString('es-CO')}*)\n`;
+        texto += `• ${p.nombre}: *${p.cantidad}* ($${p.precio.toLocaleString('es-CO')} c/u = *$${sub.toLocaleString('es-CO')}*)\n`;
       } else {
         texto += `• ${p.nombre}: *${p.cantidad}*\n`;
       }
