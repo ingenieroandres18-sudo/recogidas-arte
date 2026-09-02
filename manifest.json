@@ -8,12 +8,12 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "https://github.com/ingenieroandres18-sudo/recogidas-arte/raw/main/icono%20recogidas.png",
+      "src": "https://cdn-icons-png.flaticon.com/512/3063/3063823.png",
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "https://github.com/ingenieroandres18-sudo/recogidas-arte/raw/main/icono%20recogidas.png",
+      "src": "https://cdn-icons-png.flaticon.com/512/3063/3063823.png",
       "sizes": "512x512",
       "type": "image/png"
     }
