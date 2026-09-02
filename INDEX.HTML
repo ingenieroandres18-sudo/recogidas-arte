@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Control de Recogidas y Trazabilidad - Arte Didáctica</title>
+  
+  <!-- CONEXIÓN PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2563eb">
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3063/3063823.png">
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js');
+      });
+    }
+  </script>
+
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --success: #16a34a;
+      --success-hover: #15803d;
+      --whatsapp: #25d366;
+      --whatsapp-hover: #1ebe5d;
+      --danger: #dc2626;
+      --warning: #f59e0b;
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --border: #cbd5e1;
+      --text: #0f172a;
+    }
+    * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 10px; margin: 0; }
+    .container { max-width: 800px; margin: 0 auto; }
+    .card { background: var(--card); border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); border: 1px solid var(--border); }
+    h2, h3 { margin: 0 0 10px 0; color: #1e293b; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media(max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+    label { display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px; color: #475569; }
+    input, select { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.95rem; background: #fff; }
+    input:focus, select:focus { outline: 2px solid var(--primary); }
+    .btn { background: var(--primary); color: #fff; border: none; padding: 11px 14px; border-radius: 8px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.95rem; }
+    .btn-green { background: var(--success); }
+    .btn-wa { background: var(--whatsapp); color: #fff; }
+    .btn-dark { background: #334155; }
+    .btn-qty { background: #e2e8f0; border: none; width: 32px; height: 36px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1.1rem; color: #334155; }
+    .input-qty-table { width: 65px !important; text-align: center; font-weight: 700; padding: 6px 2px !important; border-radius: 6px; font-size: 1rem; }
+    .input-precio-table { width: 90px !important; text-align: right; font-weight: 600; padding: 6px !important; border-radius: 6px; font-size: 0.95rem; color: #047857; }
+    .quick-list { max-height: 230px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 6px; background: #f8fafc; margin-top: 6px; }
+    .item-chip { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-bottom: 1px solid #e2e8f0; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    th, td { padding: 8px; border-bottom: 1px solid var(--border); text-align: left; }
+    th { font-size: 0.8rem; background: #f1f5f9; color: #475569; text-transform: uppercase; }
+    .del-btn { background: none; border: none; color: var(--danger); font-size: 1.4rem; cursor: pointer; }
+    .status-bar { display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; margin-bottom: 10px; }
+    .online-mode { background: #dcfce7; color: #166534; }
+    .offline-mode { background: #fef3c7; color: #92400e; }
+    .total-banner { background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; padding: 10px 14px; border-radius: 8px; margin-top: 10px; display: flex; justify-content: space-between; align-items: center; font-weight: 700; }
+    .remision-badge { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 4px 10px; border-radius: 6px; font-family: monospace; font-size: 1rem; font-weight: 700; }
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.7); display: none; justify-content: center; align-items: center; z-index: 999; padding: 12px; }
+    .modal-content { background: white; border-radius: 12px; max-width: 740px; width: 100%; max-height: 90vh; overflow-y: auto; padding: 20px; }
+    .diff-ok { color: #16a34a; font-weight: 700; }
+    .diff-warn { color: #dc2626; font-weight: 700; background: #fee2e2; padding: 2px 6px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div id="statusBar" class="status-bar online-mode">
+    <span id="txtConexion">🟢 Conectado</span>
+    <div style="display:flex; gap:10px; align-items:center;">
+      <button class="btn btn-dark" style="padding:4px 10px; font-size:0.8rem;" onclick="abrirModalBalance()">⚖️ Balance de Ruta</button>
+      <span id="txtSyncBadge" style="cursor:pointer;" onclick="sincronizarPendientes()">📦 0 Pendientes</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:6px;">
+      <h2>🚚 Logística y Recogidas</h2>
+      <div style="display:flex; gap:6px; align-items:center;">
+        <span class="remision-badge" id="badgeConsecutivo">REM-0001</span>
+        <span id="etiquetaTaller" style="background:#dbeafe; color:#1e40af; padding:4px 8px; border-radius:12px; font-size:0.8rem; font-weight:600;">Arte Didáctica</span>
+      </div>
+    </div>
+    
+    <div class="grid">
+      <div>
+        <label>Fecha de Operación</label>
+        <input type="date" id="fechaRecogida">
+      </div>
+      <div>
+        <label>Conductor Encargado</label>
+        <select id="conductorSelect" onchange="toggleManualInput(this, 'conductorManual')">
+          <option value="Michael">Michael</option>
+          <option value="Richard T.">Richard T.</option>
+          <option value="__OTRO__">➕ Otro conductor...</option>
+        </select>
+        <input type="text" id="conductorManual" placeholder="Nombre del conductor" style="display:none; margin-top:6px;">
+      </div>
+      <div>
+        <label>Taller de Recogida o Destino</label>
+        <select id="sateliteSelect" onchange="cambioSatelite(this.value)">
+          <option value="Leidy Santos">Leidy Santos</option>
+          <option value="Richard Barrera">Richard Barrera</option>
+          <option value="Nohemi Galeano">Nohemi Galeano</option>
+          <option value="Miryam">Miryam</option>
+          <option value="Camilo Maceto">Camilo Maceto</option>
+          <option value="Yadira">Yadira</option>
+          <option value="Amparo">Amparo</option>
+          <option value="Cecilia">Cecilia</option>
+          <option value="Brayan">Brayan</option>
+          <option value="Reinel Losada">Reinel Losada</option>
+          <option value="Casa Grande">🏠 Casa Grande (Descargue en Bodega)</option>
+          <option value="__OTRO__">➕ Otro satélite / taller...</option>
+        </select>
+        <input type="text" id="sateliteManual" placeholder="Nombre del taller o bodega" style="display:none; margin-top:6px;">
+      </div>
+      <div>
+        <label id="labelPersonaEntrega">Persona que Entrega en Taller</label>
+        <input type="text" id="personaEntrega" value="Leidy Santos" placeholder="Nombre de quien entrega/recibe físicamente">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>📦 Catálogo y Productos</h3>
+    <div id="bloqueCatalogo">
+      <label id="labelSubtituloCatalogo">Catálogo de este taller (Clic para añadir):</label>
+      <input type="text" id="filtroCatalogo" placeholder="🔍 Buscar producto en este catálogo..." onkeyup="filtrarCatalogo()">
+      <div class="quick-list" id="contenedorCatalogo"></div>
+    </div>
+
+    <div style="margin-top:12px; background:#f8fafc; padding:12px; border-radius:8px; border:1px dashed var(--border);">
+      <label style="margin-bottom:6px;" id="labelManual">¿Entregó un producto nuevo o fuera de lista?</label>
+      <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+        <input type="text" id="inputProdNombre" placeholder="Nombre del producto..." style="flex: 2; min-width: 180px;">
+        <div id="bloquePrecioBrayan" style="display:none; flex: 1; min-width: 130px;">
+          <input type="number" id="inputProdPrecio" placeholder="$ Mano de obra unitaria" min="0" step="50">
+        </div>
+        <button class="btn btn-green" onclick="agregarManual()">+ Añadir a la lista</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h3 style="margin:0;">📋 Lista a Registrar</h3>
+      <span id="contadorTotal" style="font-weight:bold; color:var(--primary); font-size:0.95rem;">0 unidades</span>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Producto</th>
+          <th style="width: 140px; text-align: center;">Cantidad</th>
+          <th id="thPrecio" style="width: 105px; text-align: right; display:none;">V/U M.O.</th>
+          <th id="thSubtotal" style="width: 105px; text-align: right; display:none;">Subtotal</th>
+          <th style="width: 35px;"></th>
+        </tr>
+      </thead>
+      <tbody id="cuerpoTabla">
+        <tr><td colspan="5" style="text-align:center; color:#94a3b8; padding:15px;">No has añadido productos.</td></tr>
+      </tbody>
+    </table>
+
+    <div id="bannerTotalDinero" class="total-banner" style="display:none;">
+      <span>Total Mano de Obra a Liquidar:</span>
+      <span id="txtTotalDinero" style="font-size: 1.15rem;">$ 0</span>
+    </div>
+
+    <div style="margin-top:12px;">
+      <label>Observaciones / Novedades</label>
+      <input type="text" id="obs" placeholder="Ej: Paquetes completos, descarga en bodega Casa Grande...">
+    </div>
+
+    <div style="margin-top: 18px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end;">
+      <button class="btn" style="background:#64748b;" onclick="limpiarTodo()">Limpiar</button>
+      <button class="btn btn-wa" onclick="compartirPorWhatsApp()">📲 Enviar por WhatsApp</button>
+      <button class="btn btn-green" id="btnGuardar" onclick="guardarRecogida()">💾 Guardar Registro</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL BALANCE -->
+<div id="modalBalance" class="modal-overlay">
+  <div class="modal-content">
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:15px;">
+      <h3 style="margin:0;">⚖️ Balance de Ruta del Día</h3>
+      <button class="btn btn-dark" style="padding:4px 10px;" onclick="cerrarModalBalance()">✕ Cerrar</button>
+    </div>
+    <div style="display:flex; gap:10px; margin-bottom:12px; align-items:center;">
+      <label style="margin:0;">Fecha:</label>
+      <input type="date" id="fechaFiltroBalance" style="width:160px; padding:6px;" onchange="generarBalanceRuta()">
+      <button class="btn" style="padding:6px 12px; font-size:0.85rem;" onclick="generarBalanceRuta()">🔄</button>
+    </div>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Producto</th>
+            <th style="text-align:center;">Recogido</th>
+            <th style="text-align:center;">Bodega</th>
+            <th style="text-align:center;">Diferencia</th>
+          </tr>
+        </thead>
+        <tbody id="cuerpoTablaBalance">
+          <tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:15px;">No hay registros hoy.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:15px; text-align:right;">
+      <button class="btn btn-wa" style="padding:8px 12px;" onclick="compartirBalanceWhatsApp()">📲 Enviar Balance por WhatsApp</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // PEGA AQUÍ LA URL DE TU APPS SCRIPT TERMINADA EN /exec:
+  const URL_GOOGLE_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbyGwfmPLhwTNqGvjq0R8mlLtZ-_AUyp5wJ-fQBjPqPii779_e5UN_MZNDrfEebiSJnp/exec";
+
+  const catalogoCasaGrande = [
+    "CHOSA NATURAL X20", "PORTAVELA 3D CAJA X12", "ESTABLO CAJA X36", "MARRANERA CAJA X36",
+    "GALLINERO CAJA X36", "CASA ARABE PEQUEÑA NATURAL CAJA X40", "CASA ARABE GRANDE NATURAL CAJA X40",
+    "CASA ARABE PEQUEÑA COLOR CAJA X40", "CASA ARANDE GRANDE COLOR CAJA X40", "HORNO PANADERO CAJA X 36",
+    "ANIMAL MACISO GRANDEX24", "ANIMAL MACISO PEQUEÑOX24", "FOGON DE LEÑA X36", "CABALLOS 72 X 6",
+    "CABALLO X4", "MARRANA CON CRIA X72", "MARRANO X4", "CAJA SORPRESA X3", "CASA RECINA4X36",
+    "CHOSA COLOR X20", "GALLINA6 X36", "GALLINERO CAJA X36", "GALLINA DE 72 X 36", "GALLINA PINTURA X1",
+    "ALDEANOS X24", "ARBOL DE 3 X50", "PORTAVELA COLOR X36", "CORONA 3D X20", "PAPEL REGALO12 X24"
+  ];
+
+  const catalogosPorSatelite = {
+    "Leidy Santos": [
+      "CHOSA NATURAL X20", "PORTAVELA 3D CAJA X12", "ESTABLO CAJA X36", "MARRANERA CAJA X36",
+      "GALLINERO CAJA X36", "CASA ARABE PEQUEÑA NATURAL CAJA X40", "CASA ARABE GRANDE NATURAL CAJA X40",
+      "CASA ARABE PEQUEÑA COLOR CAJA X40", "CASA ARABE GRANDE COLOR CAJA X40", "HORNO PANADERO CAJA X 36",
+      "ANIMAL MACISO GRANDEX24", "ANIMAL MACISO PEQUEÑOX24", "FOGON DE LEÑA X36", "CABALLOS 72 X 6",
+      "CABALLO X4", "MARRANA CON CRIA X72", "MARRANO X4", "CAJA SORPRESA X3", "CASA RECINA4X36"
+    ],
+    "Richard Barrera": [
+      "BOLIRANA", "RANA 3 EN 1", "PARQUES ESCALERA BOLSA", "AJEDREZ PARQUES BOLSA",
+      "PARQUES 3DX6 COLOR", "PARQUES 3DX6 NATURAL", "PARQUES 3DX4"
+    ],
+    "Nohemi Galeano": ["CHOSA COLOR X20"],
+    "Miryam": [
+      "VASOS X12", "PLATOS X10", "CUCHARA X20", "TENEDOR X20", "PARQUES 3D X6 COLOR CAJA",
+      "PARQUES 3D X6 NATURAL", "PARQUES 3D X4 NATURAL", "VASO X8", "PLATO X8", "CUCHARA X10",
+      "TENEDOR X10", "BOLSA DE REGALO X12", "BOLSA MANIJA X12", "GORRO X10", "FLASH CARDS",
+      "GALLINA6 X36", "GALLINERO CAJA X36", "GALLINA DE 72 X 36", "GALLINA PINTURA X1"
+    ],
+    "Camilo Maceto": [
+      "FICHA X4 SIN ETIQUETA", "FICHA X6 SIN ETIQUETA", "FICHA X6 CON ETIQUETA",
+      "FICHA X4 CON ETIQUETA", "FICHA AJEDREZ SIN ETIQUETA", "FICHA AJEDREZ CON ETIQUETA"
+    ],
+    "Yadira": ["BOLSA X10", "UNO GRANDE", "UNO PEQUEÑO", "BILLETE DIDACTICO X50", "CARTA DOS GRANDE", "CAJA SORPRESA"],
+    "Amparo": ["ALDEANOS X24", "ARBOL DE 3 X50", "PORTAVELA COLOR X36", "CORONA 3D X20"],
+    "Cecilia": ["PARQUES 3D NATURAL X4", "PARQUES 3D NATURAL X6"],
+    "Reinel Losada": ["PAPEL REGALO12 X24"],
+    "Casa Grande": catalogoCasaGrande,
+    "Brayan": []
+  };
+
+  let listaProductos = [];
+  let sateliteActual = "Leidy Santos";
+
+  const fechaHoy = new Date().toISOString().split('T')[0];
+  document.getElementById('fechaRecogida').value = fechaHoy;
+  document.getElementById('fechaFiltroBalance').value = fechaHoy;
+
+  function obtenerSiguienteConsecutivo() {
+    let ultimo = parseInt(localStorage.getItem('consecutivo_remision_arte') || '0');
+    return `REM-${String(ultimo + 1).padStart(4, '0')}`;
+  }
+
+  function fijarConsecutivoActual() {
+    document.getElementById('badgeConsecutivo').textContent = obtenerSiguienteConsecutivo();
+  }
+
+  function confirmarConsecutivoUsado() {
+    let ultimo = parseInt(localStorage.getItem('consecutivo_remision_arte') || '0');
+    localStorage.setItem('consecutivo_remision_arte', String(ultimo + 1));
+    fijarConsecutivoActual();
+  }
+
+  fijarConsecutivoActual();
+
+  function guardarEnHistorialLocal(registro) {
+    let historial = JSON.parse(localStorage.getItem('historial_recogidas_arte') || '[]');
+    historial.push(registro);
+    localStorage.setItem('historial_recogidas_arte', JSON.stringify(historial));
+  }
+
+  function actualizarEstadoConexion() {
+    const bar = document.getElementById('statusBar');
+    const txtCon = document.getElementById('txtConexion');
+    if (navigator.onLine) {
+      bar.className = 'status-bar online-mode';
+      txtCon.textContent = '🟢 Conectado';
+      sincronizarPendientes();
+    } else {
+      bar.className = 'status-bar offline-mode';
+      txtCon.textContent = '🟡 Modo Offline (Sin señal)';
+    }
+    actualizarBadgePendientes();
+  }
+  window.addEventListener('online', actualizarEstadoConexion);
+  window.addEventListener('offline', actualizarEstadoConexion);
+
+  function obtenerPendientes() {
+    return JSON.parse(localStorage.getItem('recogidas_offline_arte') || '[]');
+  }
+
+  function guardarPendienteLocal(payload) {
+    const pendientes = obtenerPendientes();
+    pendientes.push(payload);
+    localStorage.setItem('recogidas_offline_arte', JSON.stringify(pendientes));
+    actualizarBadgePendientes();
+  }
+
+  function actualizarBadgePendientes() {
+    const count = obtenerPendientes().length;
+    const badge = document.getElementById('txtSyncBadge');
+    badge.textContent = `📦 ${count} Pendientes por subir`;
+    badge.style.color = count > 0 ? '#b45309' : 'inherit';
+  }
+
+  async function sincronizarPendientes() {
+    if (!navigator.onLine) return;
+    const pendientes = obtenerPendientes();
+    if (pendientes.length === 0) return;
+
+    for (let i = 0; i < pendientes.length; i++) {
+      try {
+        await fetch(URL_GOOGLE_APPS_SCRIPT, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(pendientes[i])
+        });
+      } catch (e) {
+        return;
+      }
+    }
+    localStorage.removeItem('recogidas_offline_arte');
+    actualizarBadgePendientes();
+  }
+
+  function toggleManualInput(selectElem, inputId) {
+    const input = document.getElementById(inputId);
+    if (selectElem.value === '__OTRO__') {
+      input.style.display = 'block';
+      input.focus();
+    } else {
+      input.style.display = 'none';
+      input.value = '';
+    }
+  }
+
+  function cambioSatelite(valor) {
+    toggleManualInput(document.getElementById('sateliteSelect'), 'sateliteManual');
+    const entregaInput = document.getElementById('personaEntrega');
+    const etiqueta = document.getElementById('etiquetaTaller');
+    const bloqueCatalogo = document.getElementById('bloqueCatalogo');
+    const labelManual = document.getElementById('labelManual');
+    const bloquePrecioBrayan = document.getElementById('bloquePrecioBrayan');
+    const thPrecio = document.getElementById('thPrecio');
+    const thSubtotal = document.getElementById('thSubtotal');
+    const bannerTotalDinero = document.getElementById('bannerTotalDinero');
+    const labelPersona = document.getElementById('labelPersonaEntrega');
+
+    if (valor !== '__OTRO__') {
+      sateliteActual = valor;
+      etiqueta.textContent = valor;
+      if (valor === 'Casa Grande') {
+        labelPersona.textContent = 'Persona que Recibe en Bodega Casa Grande';
+        entregaInput.value = '';
+        entregaInput.placeholder = 'Nombre del encargado en bodega';
+      } else {
+        labelPersona.textContent = 'Persona que Entrega en Taller';
+        entregaInput.value = valor;
+        entregaInput.placeholder = 'Nombre de quien entrega físicamente';
+      }
+    } else {
+      sateliteActual = 'Otro Satélite';
+      entregaInput.value = '';
+      etiqueta.textContent = 'Nuevo Satélite';
+      labelPersona.textContent = 'Persona que Entrega / Recibe';
+    }
+
+    if (valor === 'Brayan') {
+      bloqueCatalogo.style.display = 'none';
+      bloquePrecioBrayan.style.display = 'block';
+      labelManual.textContent = 'Escribe el producto y precio de mano de obra por unidad:';
+      thPrecio.style.display = 'table-cell';
+      thSubtotal.style.display = 'table-cell';
+      bannerTotalDinero.style.display = 'flex';
+    } else {
+      bloqueCatalogo.style.display = 'block';
+      bloquePrecioBrayan.style.display = 'none';
+      labelManual.textContent = '¿Entregó un producto nuevo o fuera de lista?';
+      thPrecio.style.display = 'none';
+      thSubtotal.style.display = 'none';
+      bannerTotalDinero.style.display = 'none';
+    }
+
+    cargarCatalogoSatelite();
+    renderTabla();
+  }
+
+  function cargarCatalogoSatelite() {
+    const lista = catalogosPorSatelite[sateliteActual] || [];
+    renderCatalogo(lista);
+    document.getElementById('filtroCatalogo').value = '';
+  }
+
+  function renderCatalogo(items) {
+    const cont = document.getElementById('contenedorCatalogo');
+    cont.innerHTML = '';
+    if (items.length === 0) {
+      cont.innerHTML = '<div style="color:#94a3b8; padding:12px; text-align:center;">Ingresa los productos directamente abajo.</div>';
+      return;
+    }
+    items.forEach(prod => {
+      const div = document.createElement('div');
+      div.className = 'item-chip';
+      div.innerHTML = `
+        <span style="font-size:0.95rem;"><strong>${prod}</strong></span>
+        <button class="btn" style="padding:6px 14px; font-size:0.85rem;" onclick="agregarDirecto('${prod}', 1, 0)">+ Añadir</button>
+      `;
+      cont.appendChild(div);
+    });
+  }
+
+  function filtrarCatalogo() {
+    const q = document.getElementById('filtroCatalogo').value.toLowerCase();
+    const lista = catalogosPorSatelite[sateliteActual] || [];
+    renderCatalogo(lista.filter(x => x.toLowerCase().includes(q)));
+  }
+
+  function agregarManual() {
+    const inputNom = document.getElementById('inputProdNombre');
+    const inputPrecio = document.getElementById('inputProdPrecio');
+    const nom = inputNom.value.trim().toUpperCase();
+    const precio = parseFloat(inputPrecio.value) || 0;
+
+    if (!nom) {
+      alert('Por favor escribe el nombre del producto.');
+      return;
+    }
+    agregarDirecto(nom, 1, precio);
+    inputNom.value = '';
+    inputPrecio.value = '';
+    inputNom.focus();
+  }
+
+  function agregarDirecto(nombre, cantidad, precio = 0) {
+    const item = listaProductos.find(p => p.nombre.toUpperCase() === nombre.toUpperCase());
+    if (item) {
+      item.cantidad += cantidad;
+      if (precio > 0) item.precio = precio;
+    } else {
+      listaProductos.push({ nombre, cantidad, precio });
+    }
+    renderTabla();
+  }
+
+  function actualizarCantidadDirecta(index, nuevoValor) {
+    const val = parseInt(nuevoValor);
+    if (isNaN(val) || val <= 0) {
+      quitarProducto(index);
+    } else {
+      listaProductos[index].cantidad = val;
+      renderTabla();
+    }
+  }
+
+  function actualizarPrecioDirecto(index, nuevoPrecio) {
+    listaProductos[index].precio = parseFloat(nuevoPrecio) || 0;
+    renderTabla();
+  }
+
+  function cambiarCantidad(index, delta) {
+    listaProductos[index].cantidad += delta;
+    if (listaProductos[index].cantidad <= 0) {
+      quitarProducto(index);
+    } else {
+      renderTabla();
+    }
+  }
+
+  function quitarProducto(index) {
+    listaProductos.splice(index, 1);
+    renderTabla();
+  }
+
+  function renderTabla() {
+    const tbody = document.getElementById('cuerpoTabla');
+    const esBrayan = (sateliteActual === 'Brayan');
+
+    if (listaProductos.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="${esBrayan ? 5 : 3}" style="text-align:center; color:#94a3b8; padding:20px;">No has añadido productos.</td></tr>`;
+      document.getElementById('contadorTotal').textContent = `0 unidades`;
+      if (esBrayan) document.getElementById('txtTotalDinero').textContent = `$ 0`;
+      return;
+    }
+
+    tbody.innerHTML = '';
+    let totalUnidades = 0;
+    let totalDinero = 0;
+
+    listaProductos.forEach((p, i) => {
+      totalUnidades += p.cantidad;
+      const subtotal = p.cantidad * (p.precio || 0);
+      totalDinero += subtotal;
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><strong>${p.nombre}</strong></td>
+        <td style="text-align: center;">
+          <div style="display:flex; align-items:center; justify-content:center; gap:4px;">
+            <button class="btn-qty" onclick="cambiarCantidad(${i}, -1)">-</button>
+            <input type="number" class="input-qty-table" value="${p.cantidad}" min="1" 
+                   onchange="actualizarCantidadDirecta(${i}, this.value)" 
+                   onkeyup="actualizarCantidadDirecta(${i}, this.value)">
+            <button class="btn-qty" onclick="cambiarCantidad(${i}, 1)">+</button>
+          </div>
+        </td>
+        ${esBrayan ? `
+          <td style="text-align: right;">
+            <input type="number" class="input-precio-table" value="${p.precio || 0}" min="0" step="50"
+                   onchange="actualizarPrecioDirecto(${i}, this.value)"
+                   onkeyup="actualizarPrecioDirecto(${i}, this.value)">
+          </td>
+          <td style="text-align: right; font-weight:700; color:#065f46;">
+            $ ${subtotal.toLocaleString('es-CO')}
+          </td>
+        ` : ''}
+        <td style="text-align: right;">
+          <button class="del-btn" onclick="quitarProducto(${i})">&times;</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    document.getElementById('contadorTotal').textContent = `${totalUnidades} unidades en total`;
+    if (esBrayan) {
+      document.getElementById('txtTotalDinero').textContent = `$ ${totalDinero.toLocaleString('es-CO')}`;
+    }
+  }
+
+  function obtenerDatosRecogida() {
+    let conductor = document.getElementById('conductorSelect').value;
+    if (conductor === '__OTRO__') conductor = document.getElementById('conductorManual').value.trim();
+
+    let satelite = document.getElementById('sateliteSelect').value;
+    if (satelite === '__OTRO__') satelite = document.getElementById('sateliteManual').value.trim();
+
+    return {
+      remision: document.getElementById('badgeConsecutivo').textContent,
+      fecha: document.getElementById('fechaRecogida').value,
+      conductor: conductor,
+      satelite: satelite,
+      entrega: document.getElementById('personaEntrega').value.trim() || 'No especificado',
+      observaciones: document.getElementById('obs').value.trim() || 'Ninguna',
+      productos: listaProductos
+    };
+  }
+
+  function compartirPorWhatsApp() {
+    if (listaProductos.length === 0) {
+      alert('Debes añadir al menos un producto.');
+      return;
+    }
+
+    const d = obtenerDatosRecogida();
+    if (!d.conductor || !d.satelite) {
+      alert('Verifica el conductor y el satélite/bodega.');
+      return;
+    }
+
+    const esBrayan = (d.satelite === 'Brayan');
+    const esCasaGrande = (d.satelite === 'Casa Grande');
+
+    let texto = `🚚 *REMISIÓN ${d.remision} - ARTE DIDÁCTICA*\n`;
+    texto += `📌 *Operación:* ${esCasaGrande ? 'Descargue en Bodega Casa Grande' : 'Recogida en Satélite'}\n`;
+    texto += `📅 *Fecha:* ${d.fecha}\n`;
+    texto += `🏢 *${esCasaGrande ? 'Bodega Destino' : 'Taller / Satélite'}:* ${d.satelite}\n`;
+    texto += `👤 *${esCasaGrande ? 'Recibe en bodega' : 'Entrega en taller'}:* ${d.entrega}\n`;
+    texto += `🚛 *Conductor:* ${d.conductor}\n\n`;
+    texto += `📦 *PRODUCTOS DETALLADOS:*\n`;
+
+    let totalUnidades = 0;
+    let totalManoObra = 0;
+
+    d.productos.forEach(p => {
+      totalUnidades += p.cantidad;
+      if (esBrayan && p.precio > 0) {
+        const sub = p.cantidad * p.precio;
+        totalManoObra += sub;
+        texto += `• ${p.nombre}: *${p.cantidad}* ($${p.precio.toLocaleString('es-CO')} c/u = *$${sub.toLocaleString('es-CO')}*)\n`;
+      } else {
+        texto += `• ${p.nombre}: *${p.cantidad}*\n`;
+      }
+    });
+
+    texto += `\n🔢 *Total unidades:* ${totalUnidades}\n`;
+    if (esBrayan && totalManoObra > 0) {
+      texto += `💰 *TOTAL MANO DE OBRA:* *$${totalManoObra.toLocaleString('es-CO')}*\n`;
+    }
+    if (d.observaciones !== 'Ninguna') {
+      texto += `📝 *Observaciones:* ${d.observaciones}\n`;
+    }
+    texto += `\n_Control y Trazabilidad Arte Didáctica S.A.S._`;
+
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`, '_blank');
+  }
+
+  async function guardarRecogida() {
+    if (listaProductos.length === 0) {
+      alert('Debes añadir al menos un producto.');
+      return;
+    }
+
+    const payload = obtenerDatosRecogida();
+    if (!payload.conductor || !payload.satelite) {
+      alert('Verifica el conductor y el satélite/bodega.');
+      return;
+    }
+
+    const btn = document.getElementById('btnGuardar');
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+
+    guardarEnHistorialLocal(payload);
+
+    if (!navigator.onLine || URL_GOOGLE_APPS_SCRIPT === "TU_URL_DE_APPS_SCRIPT_AQUI") {
+      guardarPendienteLocal(payload);
+      alert(`📶 MODO OFFLINE\n\nRemisión ${payload.remision} guardada en el celular. Se subirá a Sheets apenas haya señal.`);
+      if (confirm('¿Quieres abrir WhatsApp para compartir la remisión?')) compartirPorWhatsApp();
+      confirmarConsecutivoUsado();
+      limpiarTodo();
+      btn.disabled = false;
+      btn.textContent = '💾 Guardar Registro';
+      return;
+    }
+
+    try {
+      await fetch(URL_GOOGLE_APPS_SCRIPT, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      if (confirm(`✅ ¡Remisión ${payload.remision} guardada con éxito!\n\n¿Quieres abrir WhatsApp para enviar el soporte?`)) {
+        compartirPorWhatsApp();
+      }
+      confirmarConsecutivoUsado();
+      limpiarTodo();
+    } catch (e) {
+      guardarPendienteLocal(payload);
+      alert('⚠️ Corte de señal. Quedó guardada localmente.');
+      confirmarConsecutivoUsado();
+      limpiarTodo();
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '💾 Guardar Registro';
+    }
+  }
+
+  function limpiarTodo() {
+    listaProductos = [];
+    document.getElementById('obs').value = '';
+    document.getElementById('inputProdNombre').value = '';
+    document.getElementById('inputProdPrecio').value = '';
+    renderTabla();
+  }
+
+  function abrirModalBalance() {
+    document.getElementById('modalBalance').style.display = 'flex';
+    generarBalanceRuta();
+  }
+
+  function cerrarModalBalance() {
+    document.getElementById('modalBalance').style.display = 'none';
+  }
+
+  function generarBalanceRuta() {
+    const fecha = document.getElementById('fechaFiltroBalance').value;
+    const historial = JSON.parse(localStorage.getItem('historial_recogidas_arte') || '[]');
+    const tbody = document.getElementById('cuerpoTablaBalance');
+    const registrosDia = historial.filter(r => r.fecha === fecha);
+
+    if (registrosDia.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:20px;">No hay movimientos en ${fecha}.</td></tr>`;
+      return;
+    }
+
+    let rec = {}, ent = {}, prods = new Set();
+    registrosDia.forEach(r => {
+      const esCG = (r.satelite === 'Casa Grande');
+      r.productos.forEach(p => {
+        const nom = p.nombre.toUpperCase();
+        prods.add(nom);
+        if (esCG) ent[nom] = (ent[nom] || 0) + p.cantidad;
+        else rec[nom] = (rec[nom] || 0) + p.cantidad;
+      });
+    });
+
+    tbody.innerHTML = '';
+    Array.from(prods).sort().forEach(p => {
+      const rQty = rec[p] || 0, eQty = ent[p] || 0, dif = eQty - rQty;
+      let difHtml = dif === 0 && rQty > 0 ? '<span class="diff-ok">✓ Cuadrado</span>' : (dif < 0 ? `<span class="diff-warn">⚠️ Faltan ${Math.abs(dif)}</span>` : `+ Sobran ${dif}`);
+      tbody.innerHTML += `
+        <tr>
+          <td><strong>${p}</strong></td>
+          <td style="text-align:center;">${rQty}</td>
+          <td style="text-align:center; color:#1d4ed8; font-weight:700;">${eQty}</td>
+          <td style="text-align:center;">${difHtml}</td>
+        </tr>`;
+    });
+  }
+
+  function compartirBalanceWhatsApp() {
+    const fecha = document.getElementById('fechaFiltroBalance').value;
+    const filas = document.querySelectorAll('#cuerpoTablaBalance tr');
+    let texto = `⚖️ *BALANCE DE RUTA - ARTE DIDÁCTICA*\n📅 *Fecha:* ${fecha}\n\n`;
+    filas.forEach(f => {
+      const c = f.querySelectorAll('td');
+      if (c.length >= 4) texto += `• *${c[0].innerText}* | Rec: ${c[1].innerText} | Bodega: ${c[2].innerText} | ${c[3].innerText}\n`;
+    });
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`, '_blank');
+  }
+
+  cargarCatalogoSatelite();
+  actualizarEstadoConexion();
+</script>
+
+</body>
+</html>
