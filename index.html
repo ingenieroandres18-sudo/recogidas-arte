@@ -218,8 +218,7 @@
 </div>
 
 <script>
-  // PEGA AQUÍ LA URL DE TU APPS SCRIPT TERMINADA EN /exec:
-  const URL_GOOGLE_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbyGwfmPLhwTNqGvjq0R8mlLtZ-_AUyp5wJ-fQBjPqPii779_e5UN_MZNDrfEebiSJnp/exec";
+  const URL_GOOGLE_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbwRzhSAJm6mlHwn6eR-y_C4G_1lhc7Tu58HFfIyLloP-ig5uAFkJkFoERf_SmsyiSAH/exec";
 
   const catalogoCasaGrande = [
     "CHOSA NATURAL X20", "PORTAVELA 3D CAJA X12", "ESTABLO CAJA X36", "MARRANERA CAJA X36",
@@ -235,7 +234,7 @@
     "Leidy Santos": [
       "CHOSA NATURAL X20", "PORTAVELA 3D CAJA X12", "ESTABLO CAJA X36", "MARRANERA CAJA X36",
       "GALLINERO CAJA X36", "CASA ARABE PEQUEÑA NATURAL CAJA X40", "CASA ARABE GRANDE NATURAL CAJA X40",
-      "CASA ARABE PEQUEÑA COLOR CAJA X40", "CASA ARABE GRANDE COLOR CAJA X40", "HORNO PANADERO CAJA X 36",
+      "CASA ARABE PEQUEÑA COLOR CAJA X40", "CASA ARANDE GRANDE COLOR CAJA X40", "HORNO PANADERO CAJA X 36",
       "ANIMAL MACISO GRANDEX24", "ANIMAL MACISO PEQUEÑOX24", "FOGON DE LEÑA X36", "CABALLOS 72 X 6",
       "CABALLO X4", "MARRANA CON CRIA X72", "MARRANO X4", "CAJA SORPRESA X3", "CASA RECINA4X36"
     ],
@@ -599,7 +598,7 @@
       if (esBrayan && p.precio > 0) {
         const sub = p.cantidad * p.precio;
         totalManoObra += sub;
-        texto += `• ${p.nombre}: *${p.cantidad}* ($${p.precio.toLocaleString('es-CO')} c/u = *$${sub.toLocaleString('es-CO')}*)\n`;
+        texto += `• ${p.nombre}: *${p.cantidad*//* unids *//*}* ($${p.precio.toLocaleString('es-CO')} c/u = *$${sub.toLocaleString('es-CO')}*)\n`;
       } else {
         texto += `• ${p.nombre}: *${p.cantidad}*\n`;
       }
@@ -635,7 +634,7 @@
 
     guardarEnHistorialLocal(payload);
 
-    if (!navigator.onLine || URL_GOOGLE_APPS_SCRIPT === "TU_URL_DE_APPS_SCRIPT_AQUI") {
+    if (!navigator.onLine) {
       guardarPendienteLocal(payload);
       alert(`📶 MODO OFFLINE\n\nRemisión ${payload.remision} guardada en el celular. Se subirá a Sheets apenas haya señal.`);
       if (confirm('¿Quieres abrir WhatsApp para compartir la remisión?')) compartirPorWhatsApp();
