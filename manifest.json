@@ -8,12 +8,12 @@
   "orientation": "portrait",
   "icons": [
     {
- "src": "https://raw.githubusercontent.com/ingenieroandres18-sudo/recogidas-arte/refs/heads/main/logo.jfif",
+ "src": "https://raw.githubusercontent.com/ingenieroandres18-sudo/recogidas-arte/refs/heads/main/logo2.jfif,
       "sizes": "192x192",
       "type": "image/png"
     },
     {
-      "src": "https://raw.githubusercontent.com/ingenieroandres18-sudo/recogidas-arte/refs/heads/main/logo.jfif",
+      "src": "https://raw.githubusercontent.com/ingenieroandres18-sudo/recogidas-arte/refs/heads/main/logo2.jfif",
       "sizes": "512x512",
       "type": "image/png"
     }
