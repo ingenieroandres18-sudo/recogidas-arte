@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Control de Logística y Rutas - Arte Didáctica</title>
+  
+  <!-- CONEXIÓN PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#2563eb">
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3063/3063823.png">
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js');
+      });
+    }
+  </script>
+
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --success: #16a34a;
+      --success-hover: #15803d;
+      --whatsapp: #25d366;
+      --whatsapp-hover: #1ebe5d;
+      --danger: #dc2626;
+      --warning: #f59e0b;
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --border: #cbd5e1;
+      --text: #0f172a;
+    }
+    * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body { background: var(--bg); color: var(--text); padding: 10px; margin: 0; }
+    .container { max-width: 850px; margin: 0 auto; }
+    .card { background: var(--card); border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); border: 1px solid var(--border); }
+    h2, h3 { margin: 0 0 10px 0; color: #1e293b; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media(max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+    label { display: block; font-weight: 600; font-size: 0.85rem; margin-bottom: 4px; color: #475569; }
+    input, select, textarea { width: 100%; padding: 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 0.95rem; background: #fff; }
+    input:focus, select:focus, textarea:focus { outline: 2px solid var(--primary); }
+    .btn { background: var(--primary); color: #fff; border: none; padding: 11px 14px; border-radius: 8px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 0.95rem; }
+    .btn-green { background: var(--success); }
+    .btn-wa { background: var(--whatsapp); color: #fff; }
+    .btn-dark { background: #334155; }
+    .btn-qty { background: #e2e8f0; border: none; width: 32px; height: 36px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1.1rem; color: #334155; }
+    .input-qty-table { width: 65px !important; text-align: center; font-weight: 700; padding: 6px 2px !important; border-radius: 6px; font-size: 1rem; }
+    .quick-list { max-height: 250px; overflow-y: auto; border: 1px solid var(--border); border-radius: 8px; padding: 6px; background: #f8fafc; margin-top: 6px; }
+    .item-chip { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-bottom: 1px solid #e2e8f0; gap: 12px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    th, td { padding: 8px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: middle; }
+    th { font-size: 0.8rem; background: #f1f5f9; color: #475569; text-transform: uppercase; }
+    .del-btn { background: none; border: none; color: var(--danger); font-size: 1.4rem; cursor: pointer; }
+    .status-bar { display: flex; justify-content: space-between; align-items: center; padding: 6px 12px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; margin-bottom: 10px; }
+    .online-mode { background: #dcfce7; color: #166534; }
+    .offline-mode { background: #fef3c7; color: #92400e; }
+    .remision-badge { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; padding: 4px 10px; border-radius: 6px; font-family: monospace; font-size: 1rem; font-weight: 700; }
+    
+    .note-box { background: #fffbeb; border: 1px solid #fde68a; color: #92400e; padding: 8px 12px; border-radius: 6px; font-size: 0.85rem; margin-top: 8px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+    .instruccion-card-box { background: #eff6ff; border-left: 4px solid var(--primary); padding: 8px 10px; border-radius: 4px; font-size: 0.88rem; color: #1e3a8a; margin: 6px 0; }
+
+    /* Navegación por pestañas */
+    .nav-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+    .tab-btn { flex: 1; padding: 10px; background: #e2e8f0; border: none; border-radius: 8px; font-weight: 700; color: #475569; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; }
+    .tab-btn.active { background: var(--primary); color: white; }
+    .hidden { display: none !important; }
+
+    .route-card-item { background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 10px; border-left: 5px solid var(--primary); }
+    .status-badge { display: inline-block; padding: 3px 8px; font-size: 0.75rem; font-weight: bold; border-radius: 4px; background: #e2e8f0; color: #475569; }
+    .status-badge.completado { background: #dcfce7; color: #166534; }
+
+    .parada-row { background: #f8fafc; border: 1px dashed var(--border); padding: 10px; border-radius: 8px; margin-bottom: 10px; position: relative; }
+
+    .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.7); display: none; justify-content: center; align-items: center; z-index: 999; padding: 12px; }
+    .modal-content { background: white; border-radius: 12px; max-width: 780px; width: 100%; max-height: 90vh; overflow-y: auto; padding: 20px; }
+    .diff-ok { color: #16a34a; font-weight: 700; }
+    .diff-warn { color: #dc2626; font-weight: 700; background: #fee2e2; padding: 2px 6px; border-radius: 4px; }
+    .ref-badge { font-size: 0.8rem; font-family: monospace; background: #e2e8f0; color: #334155; padding: 3px 6px; border-radius: 4px; font-weight: 700; white-space: nowrap; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div id="statusBar" class="status-bar online-mode">
+    <span id="txtConexion">🟢 Conectado</span>
+    <div style="display:flex; gap:10px; align-items:center;">
+      <button class="btn btn-dark" style="padding:4px 10px; font-size:0.8rem;" onclick="abrirModalBalance()">⚖️ Balance de Ruta</button>
+      <span id="txtSyncBadge" style="cursor:pointer;" onclick="sincronizarPendientes()">📦 0 Pendientes</span>
+    </div>
+  </div>
+
+  <!-- PESTAÑAS DE NAVEGACIÓN -->
+  <div class="nav-tabs">
+    <button class="tab-btn active" onclick="cambiarVista('recogidas')">🚚 Recogidas / Bodega</button>
+    <button class="tab-btn" onclick="cambiarVista('coordinador')">📋 Coordinador de Rutas</button>
+    <button class="tab-btn" onclick="cambiarVista('entregas')">📦 Entrega de Pedidos</button>
+  </div>
+
+  <!-- VISTA 1: LOGÍSTICA Y RECOGIDAS -->
+  <div id="view-recogidas">
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:6px;">
+        <h2>🚚 Logística y Recogidas</h2>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <span class="remision-badge" id="badgeConsecutivo">REM-0001</span>
+          <span id="etiquetaTaller" style="background:#dbeafe; color:#1e40af; padding:4px 8px; border-radius:12px; font-size:0.8rem; font-weight:600;">Arte Didáctica</span>
+        </div>
+      </div>
+      
+      <div class="grid">
+        <div>
+          <label>Fecha de Operación</label>
+          <input type="date" id="fechaRecogida">
+        </div>
+        <div>
+          <label>Conductor Encargado</label>
+          <select id="conductorSelect" onchange="toggleManualInput(this, 'conductorManual')">
+            <option value="Michael">Michael</option>
+            <option value="Richard T.">Richard T.</option>
+            <option value="William">William</option>
+            <option value="__OTRO__">➕ Otro conductor...</option>
+          </select>
+          <input type="text" id="conductorManual" placeholder="Nombre del conductor" style="display:none; margin-top:6px;">
+        </div>
+        <div>
+          <label>Taller de Recogida o Destino</label>
+          <select id="sateliteSelect" onchange="cambioSatelite(this.value)">
+            <option value="Leidy Santos">Leidy Santos</option>
+            <option value="Richard Barrera">Richard Barrera</option>
+            <option value="Nohemi Galeano">Nohemi Galeano</option>
+            <option value="Miryam">Miryam</option>
+            <option value="Camilo Maceto">Camilo Maceto</option>
+            <option value="Yadira">Yadira</option>
+            <option value="Amparo">Amparo</option>
+            <option value="Cecilia">Cecilia</option>
+            <option value="Brayan">Brayan</option>
+            <option value="Reinel Losada">Reinel Losada</option>
+            <option value="Bodega Cafa">🏢 Bodega Cafa</option>
+            <option value="Casa Grande">🏠 Casa Grande (Descargue en Bodega)</option>
+            <option value="__OTRO__">➕ Otro satélite / taller...</option>
+          </select>
+          <input type="text" id="sateliteManual" placeholder="Nombre del taller o bodega" style="display:none; margin-top:6px;">
+        </div>
+        <div>
+          <label id="labelPersonaEntrega">Persona que Entrega en Taller</label>
+          <input type="text" id="personaEntrega" value="Leidy Santos" placeholder="Nombre de quien entrega/recibe físicamente">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>📦 Catálogo y Productos</h3>
+      <div id="bloqueCatalogo">
+        <label id="labelSubtituloCatalogo">Catálogo de este taller (Clic en el botón para añadir):</label>
+        <input type="text" id="filtroCatalogo" placeholder="🔍 Buscar por referencia o nombre..." onkeyup="filtrarCatalogo()">
+        <div class="quick-list" id="contenedorCatalogo"></div>
+      </div>
+
+      <div style="margin-top:14px; background:#f8fafc; padding:12px; border-radius:8px; border:1px dashed var(--border);">
+        <label style="margin-bottom:6px; color:#1e293b; font-weight:700;">➕ Registrar nuevo producto permanente en este catálogo:</label>
+        <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+          <input type="text" id="inputProdCodigo" placeholder="Ref/Código (Ej. A500)" style="flex: 1; min-width: 120px;">
+          <input type="text" id="inputProdNombre" placeholder="Nombre exacto del producto..." style="flex: 2; min-width: 180px;">
+          <button class="btn btn-green" onclick="agregarPermanente()" style="padding: 10px 18px;">💾 Guardar en Catálogo</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3 style="margin:0;">📋 Lista a Registrar</h3>
+        <span id="contadorTotal" style="font-weight:bold; color:var(--primary); font-size:0.95rem;">0 unidades</span>
+      </div>
+
+      <div class="note-box">
+        <span>⚠️</span> 
+        <div><strong>Nota Importante:</strong> Ingrese la cantidad exacta en <strong>UNIDADES</strong> (piezas totales), no en cajas ni bultos.</div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th style="width: 100px;">Referencia</th>
+            <th>Producto</th>
+            <th style="width: 130px; text-align: center;">Cantidad (Unidades)</th>
+            <th style="width: 35px;"></th>
+          </tr>
+        </thead>
+        <tbody id="cuerpoTabla">
+          <tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:15px;">No has añadido productos.</td></tr>
+        </tbody>
+      </table>
+
+      <div style="margin-top:12px;">
+        <label>Observaciones / Novedades</label>
+        <input type="text" id="obs" placeholder="Ej: Paquetes completos, descarga en bodega Casa Grande...">
+      </div>
+
+      <div style="margin-top: 18px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end;">
+        <button class="btn" style="background:#64748b;" onclick="limpiarTodo()">Limpiar</button>
+        <button class="btn btn-wa" onclick="compartirPorWhatsApp()">📲 Enviar por WhatsApp</button>
+        <button class="btn btn-green" id="btnGuardar" onclick="guardarRecogida()">💾 Guardar Registro</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VISTA 2: COORDINADOR DE RUTAS -->
+  <div id="view-coordinador" class="card hidden">
+    <h2>📋 Módulo Coordinador: Delegar Rutas y Múltiples Paradas</h2>
+    <p style="font-size: 0.9rem; color: #475569; margin-top: 0;">Asigna la fecha, conductor, paradas y el orden de secuencia.</p>
+    
+    <form id="coord-form" onsubmit="guardarRutaCoordinador(event)">
+      <div class="grid" style="margin-bottom: 12px;">
+        <div>
+          <label>Fecha de Ruta</label>
+          <input type="date" id="coordFecha" required onchange="renderizarRutasCoordinador()">
+        </div>
+        <div>
+          <label>Conductor Asignado</label>
+          <select id="coordConductor" required onchange="toggleManualInput(this, 'coordConductorManual'); renderizarRutasCoordinador();">
+            <option value="Michael">Michael</option>
+            <option value="Richard T.">Richard T.</option>
+            <option value="William">William</option>
+            <option value="__OTRO__">➕ Otro conductor...</option>
+          </select>
+          <input type="text" id="coordConductorManual" placeholder="Nombre del conductor" style="display:none; margin-top:6px;" oninput="renderizarRutasCoordinador()">
+        </div>
+      </div>
+
+      <h3>Paradas e Instrucciones de la Ruta</h3>
+      <div id="contenedorParadasMultiples">
+        <div class="parada-row">
+          <div class="grid">
+            <div>
+              <label>🔢 Orden / Secuencia (Ej. 1, 2, 3...)</label>
+              <input type="number" class="parada-orden" value="1" min="1" style="font-weight: 700; color: var(--primary);">
+            </div>
+            <div>
+              <label>Tipo de Parada</label>
+              <select class="parada-tipo" onchange="cambioTipoParadaFila(this)">
+                <option value="Satélite / Taller">Satélite / Taller / Bodega</option>
+                <option value="Cliente Final">Cliente Final</option>
+                <option value="Insumos / Proveedor">Insumos / Proveedor / Otro</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="margin-top: 8px;">
+            <label>Destino o Cliente / Satélite</label>
+            <select class="parada-destino-select">
+              <option value="Leidy Santos">Leidy Santos</option>
+              <option value="Richard Barrera">Richard Barrera</option>
+              <option value="Nohemi Galeano">Nohemi Galeano</option>
+              <option value="Miryam">Miryam</option>
+              <option value="Camilo Maceto">Camilo Maceto</option>
+              <option value="Yadira">Yadira</option>
+              <option value="Amparo">Amparo</option>
+              <option value="Cecilia">Cecilia</option>
+              <option value="Brayan">Brayan</option>
+              <option value="Reinel Losada">Reinel Losada</option>
+              <option value="Bodega Cafa">🏢 Bodega Cafa</option>
+              <option value="Casa Grande">🏠 Bodega Casa Grande</option>
+            </select>
+            <input type="text" class="parada-destino-manual" placeholder="Escribe el nombre..." style="display:none; margin-top:4px;">
+          </div>
+
+          <div style="margin-top: 8px;" class="grid">
+            <div>
+              <label>Dirección exacta (Opcional)</label>
+              <input type="text" class="parada-direccion" placeholder="Ej. Calle 100 # 15-20">
+            </div>
+            <div class="grupo-factura" style="display:none;">
+              <label>Nro Factura Asociada</label>
+              <input type="text" class="parada-factura" placeholder="Ej. FAC-00123">
+            </div>
+          </div>
+
+          <div style="margin-top: 8px;" class="grupo-bolsas hidden">
+            <label>📦 Cantidad de Bolsas o Cajas</label>
+            <input type="text" class="parada-bolsas" placeholder="Ej. 2 cajas y 1 bolsa">
+          </div>
+
+          <div style="margin-top: 8px;">
+            <label>Instrucciones Específicas</label>
+            <textarea class="parada-instruccion" rows="2" placeholder="Ej: Recoger bodega trasera, revisar sellos..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 10px; display:flex; gap:10px;">
+        <button type="button" class="btn btn-dark" style="flex:1; font-size:0.85rem;" onclick="agregarFilaParada()">➕ Añadir otra parada a esta salida</button>
+      </div>
+
+      <div style="margin-top: 15px;">
+        <button type="submit" class="btn btn-green" style="width: 100%;">🚀 Enviar Ruta al Conductor</button>
+      </div>
+    </form>
+
+    <hr style="margin: 20px 0; border: 0; border-top: 1px solid var(--border);">
+
+    <h3>Historial y Entregas Programadas (Fecha y Conductor Seleccionados)</h3>
+    <div id="listaTodasRutasCoord" style="max-height: 350px; overflow-y: auto;">
+      <p style="color: #64748b; text-align: center;">No hay paradas registradas para esta fecha y conductor.</p>
+    </div>
+  </div>
+
+  <!-- VISTA 3: ENTREGA DE PEDIDOS Y SUPERVISIÓN -->
+  <div id="view-entregas" class="card hidden">
+    <h2>📦 Panel de Gestión de Entregas</h2>
+    <p style="font-size: 0.9rem; color: #475569; margin-top: 0;">Ingresa tu PIN de Conductor o clave de Administrador para supervisar las rutas.</p>
+    
+    <!-- PANTALLA DE LOGIN UNIFICADA -->
+    <div id="panelLoginConductor" style="background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid var(--border); text-align: center; max-width: 400px; margin: 20px auto;">
+      <h3 style="color: var(--primary);">🔐 Iniciar Sesión</h3>
+      <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 15px;">Selecciona tu rol o nombre y digita tu clave:</p>
+      
+      <div style="margin-bottom: 12px; text-align: left;">
+        <label>Perfil de Acceso</label>
+        <select id="loginPerfilSelect">
+          <option value="Michael">Conductor: Michael</option>
+          <option value="Richard T.">Conductor: Richard T.</option>
+          <option value="William">Conductor: William</option>
+          <option value="ADMINISTRADOR">👑 Administrador General (Ver Todos)</option>
+        </select>
+      </div>
+      
+      <div style="margin-bottom: 15px; text-align: left;">
+        <label>Clave o PIN de Acceso</label>
+        <input type="password" id="loginPinInput" placeholder="Digita tu clave..." maxlength="10" style="text-align: center; font-size: 1.2rem; letter-spacing: 2px;">
+      </div>
+
+      <button class="btn btn-green" style="width: 100%;" onclick="verificarLoginSistema()">🔓 Ingresar al Sistema</button>
+    </div>
+
+    <!-- PANTALLA DE PEDIDOS / SUPERVISIÓN (OCULTA HASTA INGRESAR CLAVE) -->
+    <div id="panelPedidosConductor" class="hidden">
+      <div style="display: flex; justify-content: space-between; align-items: center; background: #e0f2fe; padding: 10px 14px; border-radius: 8px; margin-bottom: 15px;">
+        <span id="txtSesionActiva" style="font-weight: 700; color: #0369a1; font-size: 1rem;">Sesión Activa</span>
+        <button class="btn" style="padding: 4px 10px; font-size: 0.8rem; background: #dc2626;" onclick="cerrarSesionSistema()">🔒 Cerrar Sesión</button>
+      </div>
+
+      <!-- SELECTOR EXTRA SOLO VISIBLE PARA EL ADMINISTRADOR -->
+      <div id="filtroAdminContainer" class="hidden" style="background: #fef3c7; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px solid #fcd34d;">
+        <label style="color: #92400e;">👑 Modo Supervisor: Selecciona el conductor a revisar</label>
+        <select id="selectConductorAdmin" onchange="cargarRutasExclusivas()">
+          <option value="Michael">Michael</option>
+          <option value="Richard T.">Richard T.</option>
+          <option value="William">William</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom: 15px; max-width: 300px;">
+        <label>Filtrar por Fecha</label>
+        <input type="date" id="filtroFechaEntrega" onchange="cargarRutasExclusivas()">
+      </div>
+
+      <div id="contenedorRutasConductor">
+        <p style="text-align: center; color: var(--text-light); padding: 20px;">Cargando pedidos...</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- MODAL BALANCE -->
+<div id="modalBalance" class="modal-overlay">
+  <div class="modal-content">
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid var(--border); padding-bottom:10px; margin-bottom:15px;">
+      <h3 style="margin:0;">⚖️ Balance de Ruta del Día</h3>
+      <button class="btn btn-dark" style="padding:4px 10px;" onclick="cerrarModalBalance()">✕ Cerrar</button>
+    </div>
+    <div style="display:flex; gap:10px; margin-bottom:12px; align-items:center;">
+      <label style="margin:0;">Fecha:</label>
+      <input type="date" id="fechaFiltroBalance" style="width:160px; padding:6px;" onchange="generarBalanceRuta()">
+      <button class="btn" style="padding:6px 12px; font-size:0.85rem;" onclick="generarBalanceRuta()">🔄</button>
+    </div>
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:100px;">Referencia</th>
+            <th>Producto</th>
+            <th style="text-align:center;">Recogido (Unidades)</th>
+            <th style="text-align:center;">Bodega (Unidades)</th>
+            <th style="text-align:center;">Diferencia</th>
+          </tr>
+        </thead>
+        <tbody id="cuerpoTablaBalance">
+          <tr><td colspan="5" style="text-align:center; color:#94a3b8; padding:20px;">No hay movimientos en esta fecha.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:15px; text-align:right;">
+      <button class="btn btn-wa" style="padding:8px 12px;" onclick="compartirBalanceWhatsApp()">📲 Enviar Balance por WhatsApp</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // PEGA AQUÍ TUS DOS ENLACES DE GOOGLE APPS SCRIPT:
+  const URL_SHEET_RECOGIDAS = "https://script.google.com/macros/s/AKfycbyF4MAWXtt9hJybHB0AXLOJxAMK3wbup7W_PGFzoXS5NJxaNPoVvhkpxSkrMAauy1x5/exec";
+  const URL_SHEET_RUTAS = "https://script.google.com/macros/s/AKfycbyrrUeFQQXPE3vqi7FFfUmp2ficqyeehdmm2vECeXE79yGWgnkR2lFQ5ejjOxnGNT8QkA/exec";
+
+  // CREDENCIALES Y PINES DE ACCESO SEGURO
+  const CLAVES_SISTEMA = {
+    "Michael": "1234",
+    "Richard T.": "5678",
+    "William": "9876",
+    "ADMINISTRADOR": "admin2026"
+  };
+
+  let sesionActual = null;
+  let esAdmin = false;
+
+  const catalogoCasaGrandeBase = [
+    {codigo: "R1-708", nombre: "CHOZA MADERA PEQ NATURAL"},
+    {codigo: "R1-250", nombre: "PORTAVELA 3D MADERA"},
+    {codigo: "R1-705", nombre: "ESTABLO"},
+    {codigo: "R1-707", nombre: "MARRANERA"},
+    {codigo: "R1-706", nombre: "GALLINERO"},
+    {codigo: "R1-715", nombre: "CASA ARABE MADERA NATURAL PEQUEÑA"},
+    {codigo: "R1-716", nombre: "CASA ARABE MADERA NATURAL GRANDE"},
+    {codigo: "R1-703", nombre: "CASA ARABE MADERA COLOR PEQUEÑA"},
+    {codigo: "R1-704", nombre: "CASA ARABE MADERA COLOR GRANDE"},
+    {codigo: "R1-726", nombre: "HORNO PANADERO"},
+    {codigo: "R1-701", nombre: "ANIMAL MACIZO GRANDE"},
+    {codigo: "R1-702", nombre: "ANIMAL MACIZO PEQUEÑO"},
+    {codigo: "R1-727", nombre: "FOGON DE LEÑA"},
+    {codigo: "R1-734", nombre: "PAQUETE CABALLOS X72"},
+    {codigo: "R1-730", nombre: "CABALLOS X 4"},
+    {codigo: "R1-731", nombre: "MARRANAS CON CRIA PAQ *72"},
+    {codigo: "R1-729", nombre: "MARRANOS X 4"},
+    {codigo: "A071", nombre: "CAJA SORPRESA X3"},
+    {codigo: "R1-724", nombre: "CASA MINI EN RESINA"},
+    {codigo: "R1-709", nombre: "CHOZA MADERA PEQUEÑA COLOR"},
+    {codigo: "R1-728", nombre: "GALLINA X 6"},
+    {codigo: "R1-735", nombre: "PAQUETE GALLINAS X72"},
+    {codigo: "R3-907", nombre: "GALLINA"},
+    {codigo: "R1-721", nombre: "ALDEANOS"},
+    {codigo: "R1-720", nombre: "ARBOLITO PESEBRE"},
+    {codigo: "R1-808", nombre: "PORTAVELA MADERA COLOR"},
+    {codigo: "R1-712", nombre: "CORONA NAVIDEÑA MADERA 3D"},
+    {codigo: "R1-732", nombre: "PAPEL REGALO NAVIDAD 50*70"}
+  ];
+
+  const catalogosPorSateliteBase = {
+    "Leidy Santos": catalogoCasaGrandeBase,
+    "Richard Barrera": [
+      {codigo: "A091", nombre: "BOLIRANA EN MADERA"},
+      {codigo: "A137", nombre: "JUEGO RANA 3 EN 1"},
+      {codigo: "A018", nombre: "PARQUES ESCALERA 4 PUESTOS EN BOLSA"},
+      {codigo: "A145", nombre: "PARQUES AJEDREZ 4 PUESTOS EN BOLSA"},
+      {codigo: "A202", nombre: "PARQUES 3D 6 PUESTOS COLOR"},
+      {codigo: "A095", nombre: "PARQUES MADERA 3D 6 PUESTOS"},
+      {codigo: "A098", nombre: "PARQUES 3D 4 PUESTOS"}
+    ],
+    "Nohemi Galeano": [{codigo: "R1-709", nombre: "CHOZA MADERA PEQUEÑA COLOR"}],
+    "Miryam": [
+      {codigo: "A272", nombre: "VASO X8 UNID"},
+      {codigo: "A273", nombre: "PLATO X8 UNID"},
+      {codigo: "A274", nombre: "CUCHARA X10 UNID"},
+      {codigo: "A025", nombre: "TENEDOR X 20"},
+      {codigo: "A202", nombre: "PARQUES 3D 6 PUESTOS COLOR"},
+      {codigo: "A095", nombre: "PARQUES MADERA 3D 6 PUESTOS"},
+      {codigo: "A098", nombre: "PARQUES 3D 4 PUESTOS"},
+      {codigo: "A046", nombre: "BOLSA DE REGALO ECONOMICA GRANDE * 12"},
+      {codigo: "A024", nombre: "GORRO X 10"},
+      {codigo: "A143", nombre: "FLASH CARD PAQ * 25 CARTAS"},
+      {codigo: "R1-728", nombre: "GALLINA X 6"},
+      {codigo: "R1-706", nombre: "GALLINERO"},
+      {codigo: "R1-735", nombre: "PAQUETE GALLINAS X72"},
+      {codigo: "R3-907", nombre: "GALLINA"}
+    ],
+    "Camilo Maceto": [
+      {codigo: "A030", nombre: "PAQUETE DE FICHAS PARQUES 4 PUESTOS"},
+      {codigo: "A110", nombre: "PAQUETE DE FICHAS PARQUES 6 PUESTOS"},
+      {codigo: "A127", nombre: "PAQUETE DE FICHAS PARA AJEDREZ"}
+    ],
+    "Yadira": [
+      {codigo: "A031", nombre: "BOLSA SORPRESA X 10"},
+      {codigo: "A042", nombre: "UNO GRANDE"},
+      {codigo: "A041", nombre: "UNO PEQUEÑO"},
+      {codigo: "A032", nombre: "BILLETE DIDACTICO X 50"},
+      {codigo: "A118", nombre: "CARTAS DOS"},
+      {codigo: "A071", nombre: "CAJA SORPRESA X3"}
+    ],
+    "Amparo": [
+      {codigo: "R1-721", nombre: "ALDEANOS"},
+      {codigo: "R1-720", nombre: "ARBOLITO PESEBRE"},
+      {codigo: "R1-808", nombre: "PORTAVELA MADERA COLOR"},
+      {codigo: "R1-712", nombre: "CORONA NAVIDEÑA MADERA 3D"}
+    ],
+    "Cecilia": [
+      {codigo: "A098", nombre: "PARQUES 3D 4 PUESTOS"},
+      {codigo: "A095", nombre: "PARQUES MADERA 3D 6 PUESTOS"}
+    ],
+    "Reinel Losada": [{codigo: "R1-732", nombre: "PAPEL REGALO NAVIDAD 50*70"}],
+    "Bodega Cafa": catalogoCasaGrandeBase,
+    "Casa Grande": catalogoCasaGrandeBase,
+    "Brayan": [
+      {codigo: "A016", nombre: "JUEGOS GRANDES"},
+      {codigo: "A015", nombre: "JUEGOS MEDIANOS"},
+      {codigo: "A014", nombre: "JUEGOS PEQUEÑOS"},
+      {codigo: "A121", nombre: "ROMPECABEZAS DELUXE MADERA"},
+      {codigo: "A058", nombre: "ROMPECABEZAS DE MADERA PEQUEÑO 9 PZS"},
+      {codigo: "A059", nombre: "ROMPECABEZAS DE MADERA MEDIANO 12 PZS"},
+      {codigo: "A060", nombre: "ROMPECABEZAS DE MADERA GRANDE 20 PZS"},
+      {codigo: "A081", nombre: "ROMPECABEZAS MADERA EXTRA GRANDE 40 PZS"},
+      {codigo: "A111", nombre: "ROMPECABEZAS EN CARTON 40 PIEZAS 50X35"},
+      {codigo: "A133", nombre: "PARQUES ESCALERA 6 PUESTOS EN MADERA 45*45"},
+      {codigo: "A134", nombre: "PARQUES AJEDREZ 4 PUESTOS EN MADERA 30*30"},
+      {codigo: "A090", nombre: "LOTERIA BASE Y TAPA MEDIANA"},
+      {codigo: "A309", nombre: "ROMPECABEZAS-PUZZLE 72 PCS (45*24*5.6)"},
+      {codigo: "A092", nombre: "JUEGO NO TE ENOJES"},
+      {codigo: "A132", nombre: "TANGRAM GRANDE"},
+      {codigo: "A067", nombre: "TANGRAM MEDIANO"},
+      {codigo: "A066", nombre: "TANGRAM PEQUEÑO"},
+      {codigo: "A332", nombre: "JUEGO DE MESA DELUXE (45*24*5.6)"},
+      {codigo: "A334", nombre: "LETRERO DECORATIVO DE VEHICULOS CLASICOS"},
+      {codigo: "A100", nombre: "JUEGO CLASSIC GAMES 5 EN 1"},
+      {codigo: "A135", nombre: "JUEGO TABLAS DE MULTIPLICAR"},
+      {codigo: "A143", nombre: "FLASH CARD PAQ * 25 CARTAS"}
+    ]
+  };
+
+  function obtenerCatalogosGuardados() {
+    let guardados = JSON.parse(localStorage.getItem('catalogos_satelites_arte') || '{}');
+    let excluidos = JSON.parse(localStorage.getItem('catalogos_excluidos_arte') || '{}');
+    let final = {};
+
+    for (let sat in catalogosPorSateliteBase) {
+      let base = catalogosPorSateliteBase[sat];
+      let extras = guardados[sat] || [];
+      let exList = excluidos[sat] || [];
+
+      let unicosMap = new Map();
+      base.forEach(item => {
+        if (!exList.includes(item.codigo + "|" + item.nombre)) {
+          unicosMap.set(item.codigo + "|" + item.nombre, item);
+        }
+      });
+      extras.forEach(item => {
+        if (!exList.includes(item.codigo + "|" + item.nombre)) {
+          unicosMap.set(item.codigo + "|" + item.nombre, item);
+        }
+      });
+      final[sat] = Array.from(unicosMap.values());
+    }
+    return final;
+  }
+
+  let catalogosPorSatelite = obtenerCatalogosGuardados();
+  let listaProductos = [];
+  let sateliteActual = "Leidy Santos";
+
+  const fechaHoy = new Date().toISOString().split('T')[0];
+  document.getElementById('fechaRecogida').value = fechaHoy;
+  document.getElementById('fechaFiltroBalance').value = fechaHoy;
+  document.getElementById('coordFecha').value = fechaHoy;
+  document.getElementById('filtroFechaEntrega').value = fechaHoy;
+
+  function obtenerSiguienteConsecutivo() {
+    let ultimo = parseInt(localStorage.getItem('consecutivo_remision_arte') || '0');
+    return `REM-${String(ultimo + 1).padStart(4, '0')}`;
+  }
+
+  function fijarConsecutivoActual() {
+    document.getElementById('badgeConsecutivo').textContent = obtenerSiguienteConsecutivo();
+  }
+
+  function confirmarConsecutivoUsado() {
+    let ultimo = parseInt(localStorage.getItem('consecutivo_remision_arte') || '0');
+    localStorage.setItem('consecutivo_remision_arte', String(ultimo + 1));
+    fijarConsecutivoActual();
+  }
+
+  fijarConsecutivoActual();
+
+  function cambiarVista(vista) {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('view-recogidas').classList.add('hidden');
+    document.getElementById('view-coordinador').classList.add('hidden');
+    document.getElementById('view-entregas').classList.add('hidden');
+
+    if (vista === 'recogidas') {
+      document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
+      document.getElementById('view-recogidas').classList.remove('hidden');
+    } else if (vista === 'coordinador') {
+      document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
+      document.getElementById('view-coordinador').classList.remove('hidden');
+      renderizarRutasCoordinador();
+    } else if (vista === 'entregas') {
+      document.querySelector('.tab-btn:nth-child(3)').classList.add('active');
+      document.getElementById('view-entregas').classList.remove('hidden');
+      if (sesionActual) {
+        cargarRutasExclusivas();
+      }
+    }
+  }
+
+  // --- CONTROL DE ACCESO ---
+  function verificarLoginSistema() {
+    const perfil = document.getElementById('loginPerfilSelect').value;
+    const clave = document.getElementById('loginPinInput').value.trim();
+
+    if (CLAVES_SISTEMA[perfil] && CLAVES_SISTEMA[perfil] === clave) {
+      if (perfil === "ADMINISTRADOR") {
+        esAdmin = true;
+        sesionActual = document.getElementById('selectConductorAdmin').value;
+        document.getElementById('txtSesionActiva').textContent = `👑 Supervisor: Administrador General`;
+        document.getElementById('filtroAdminContainer').classList.remove('hidden');
+      } else {
+        esAdmin = false;
+        sesionActual = perfil;
+        document.getElementById('txtSesionActiva').textContent = `🚚 Conductor: ${perfil}`;
+        document.getElementById('filtroAdminContainer').classList.add('hidden');
+      }
+
+      document.getElementById('panelLoginConductor').classList.add('hidden');
+      document.getElementById('panelPedidosConductor').classList.remove('hidden');
+      document.getElementById('loginPinInput').value = '';
+      cargarRutasExclusivas();
+    } else {
+      alert('❌ Clave incorrecta. Por favor verifica tus datos.');
+      document.getElementById('loginPinInput').value = '';
+      document.getElementById('loginPinInput').focus();
+    }
+  }
+
+  function cerrarSesionSistema() {
+    sesionActual = null;
+    esAdmin = false;
+    document.getElementById('panelPedidosConductor').classList.add('hidden');
+    document.getElementById('panelLoginConductor').classList.remove('hidden');
+  }
+
+  // --- GPS AUTOMÁTICO ---
+  function obtenerUbicacionGPS() {
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) {
+        resolve('N/D');
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude.toFixed(5);
+          const lon = position.coords.longitude.toFixed(5);
+          resolve(`${lat},${lon}`);
+        },
+        () => {
+          resolve('N/D');
+        },
+        { timeout: 8000, enableHighAccuracy: true }
+      );
+    });
+  }
+
+  // --- MÚLTIPLES PARADAS E INSTRUCCIONES ---
+  function agregarFilaParada() {
+    const contenedor = document.getElementById('contenedorParadasMultiples');
+    const div = document.createElement('div');
+    div.className = 'parada-row';
+    const numSugerido = contenedor.querySelectorAll('.parada-row').length + 1;
+
+    div.innerHTML = `
+      <div class="grid">
+        <div>
+          <label>🔢 Orden / Secuencia (Ej. 1, 2, 3...)</label>
+          <input type="number" class="parada-orden" value="${numSugerido}" min="1" style="font-weight: 700; color: var(--primary);">
+        </div>
+        <div>
+          <label>Tipo de Parada</label>
+          <select class="parada-tipo" onchange="cambioTipoParadaFila(this)">
+            <option value="Satélite / Taller">Satélite / Taller / Bodega</option>
+            <option value="Cliente Final">Cliente Final</option>
+            <option value="Insumos / Proveedor">Insumos / Proveedor / Otro</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top: 8px;">
+        <label>Destino o Cliente / Satélite</label>
+        <select class="parada-destino-select">
+          <option value="Leidy Santos">Leidy Santos</option>
+          <option value="Richard Barrera">Richard Barrera</option>
+          <option value="Nohemi Galeano">Nohemi Galeano</option>
+          <option value="Miryam">Miryam</option>
+          <option value="Camilo Maceto">Camilo Maceto</option>
+          <option value="Yadira">Yadira</option>
+          <option value="Amparo">Amparo</option>
+          <option value="Cecilia">Cecilia</option>
+          <option value="Brayan">Brayan</option>
+          <option value="Reinel Losada">Reinel Losada</option>
+          <option value="Bodega Cafa">🏢 Bodega Cafa</option>
+          <option value="Casa Grande">🏠 Bodega Casa Grande</option>
+        </select>
+        <input type="text" class="parada-destino-manual" placeholder="Escribe el nombre..." style="display:none; margin-top:4px;">
+      </div>
+      <div style="margin-top: 8px;" class="grid">
+        <div>
+          <label>Dirección exacta (Opcional)</label>
+          <input type="text" class="parada-direccion" placeholder="Ej. Calle 100 # 15-20">
+        </div>
+        <div class="grupo-factura" style="display:none;">
+          <label>Nro Factura Asociada</label>
+          <input type="text" class="parada-factura" placeholder="Ej. FAC-00123">
+        </div>
+      </div>
+      <div style="margin-top: 8px;" class="grupo-bolsas hidden">
+        <label>📦 Cantidad de Bolsas o Cajas</label>
+        <input type="text" class="parada-bolsas" placeholder="Ej. 2 cajas y 1 bolsa">
+      </div>
+      <div style="margin-top: 8px;">
+        <label>Instrucciones Específicas</label>
+        <textarea class="parada-instruccion" rows="2" placeholder="Ej: Recoger bodega trasera, revisar sellos..."></textarea>
+      </div>
+      <div style="text-align: right; margin-top: 6px;">
+        <button type="button" class="btn" style="background:#fee2e2; color:#dc2626; padding:6px 12px; font-size:0.8rem;" onclick="this.closest('.parada-row').remove()">🗑️ Quitar Parada</button>
+      </div>
+    `;
+    contenedor.appendChild(div);
+  }
+
+  function cambioTipoParadaFila(selectElem) {
+    const row = selectElem.closest('.parada-row');
+    const selectDestino = row.querySelector('.parada-destino-select');
+    const inputManual = row.querySelector('.parada-destino-manual');
+    const grupoFactura = row.querySelector('.grupo-factura');
+    const inputFactura = row.querySelector('.parada-factura');
+    const grupoBolsas = row.querySelector('.grupo-bolsas');
+    const inputBolsas = row.querySelector('.parada-bolsas');
+    const tipo = selectElem.value;
+
+    if (tipo === 'Cliente Final') {
+      selectDestino.style.display = 'none';
+      inputManual.style.display = 'block';
+      inputManual.value = '';
+      inputManual.placeholder = 'Nombre del cliente final...';
+      inputManual.required = true;
+
+      grupoFactura.style.display = 'block';
+      inputFactura.required = true;
+
+      grupoBolsas.classList.remove('hidden');
+    } else if (tipo === 'Insumos / Proveedor') {
+      selectDestino.style.display = 'none';
+      inputManual.style.display = 'block';
+      inputManual.value = '';
+      inputManual.placeholder = 'Nombre del proveedor/insumo...';
+      inputManual.required = true;
+
+      grupoFactura.style.display = 'none';
+      inputFactura.required = false;
+      inputFactura.value = '';
+
+      grupoBolsas.classList.add('hidden');
+      inputBolsas.value = '';
+    } else {
+      selectDestino.style.display = 'block';
+      inputManual.style.display = 'none';
+      inputManual.required = false;
+
+      grupoFactura.style.display = 'none';
+      inputFactura.required = false;
+      inputFactura.value = '';
+
+      grupoBolsas.classList.add('hidden');
+      inputBolsas.value = '';
+    }
+  }
+
+  function obtenerConductorSeleccionado(selectId, manualId) {
+    let sel = document.getElementById(selectId).value;
+    if (sel === '__OTRO__') {
+      return document.getElementById(manualId).value.trim() || 'Otro Conductor';
+    }
+    return sel;
+  }
+
+  async function guardarRutaCoordinador(e) {
+    e.preventDefault();
+    const fecha = document.getElementById('coordFecha').value;
+    const conductor = obtenerConductorSeleccionado('coordConductor', 'coordConductorManual');
+    const filasParadas = document.querySelectorAll('.parada-row');
+
+    if (filasParadas.length === 0) {
+      alert('Debes agregar al menos una parada.');
+      return;
+    }
+
+    let rutasGlobales = JSON.parse(localStorage.getItem('rutas_delegadas_arte') || '[]');
+
+    for (let i = 0; i < filasParadas.length; i++) {
+      let row = filasParadas[i];
+      let orden = row.querySelector('.parada-orden').value || '1';
+      let tipo = row.querySelector('.parada-tipo').value;
+      let selectDestino = row.querySelector('.parada-destino-select').value;
+      let inputManual = row.querySelector('.parada-destino-manual').value.trim();
+      let direccion = row.querySelector('.parada-direccion').value.trim();
+      let factura = row.querySelector('.parada-factura').value.trim();
+      let bolsas = row.querySelector('.parada-bolsas').value.trim();
+      let instruccion = row.querySelector('.parada-instruccion').value.trim();
+
+      let destinoFinal = (tipo === 'Cliente Final' || tipo === 'Insumos / Proveedor') ? inputManual : selectDestino;
+
+      let objetoParada = {
+        id: Date.now() + i,
+        fecha: fecha,
+        conductor: conductor,
+        orden: parseInt(orden),
+        tipo: tipo,
+        destino: destinoFinal,
+        direccion: direccion || '',
+        factura: factura || 'N/A',
+        bolsas: bolsas || 'N/A',
+        instruccion: instruccion || 'Ninguna instrucción especial',
+        estado: 'Pendiente',
+        novedad: 'Asignado'
+      };
+
+      rutasGlobales.push(objetoParada);
+
+      if (navigator.onLine && URL_SHEET_RUTAS && URL_SHEET_RUTAS.startsWith("http")) {
+        try {
+          await fetch(URL_SHEET_RUTAS, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(objetoParada)
+          });
+        } catch (err) {
+          console.error("Error al sincronizar parada", err);
+        }
+      }
+    }
+
+    localStorage.setItem('rutas_delegadas_arte', JSON.stringify(rutasGlobales));
+    alert('✅ ¡Ruta y paradas asignadas con éxito!');
+    
+    document.getElementById('coord-form').reset();
+    document.getElementById('coordFecha').value = fecha;
+    document.getElementById('coordConductor').value = conductor;
+    document.getElementById('contenedorParadasMultiples').innerHTML = `
+      <div class="parada-row">
+        <div class="grid">
+          <div>
+            <label>🔢 Orden / Secuencia (Ej. 1, 2, 3...)</label>
+            <input type="number" class="parada-orden" value="1" min="1" style="font-weight: 700; color: var(--primary);">
+          </div>
+          <div>
+            <label>Tipo de Parada</label>
+            <select class="parada-tipo" onchange="cambioTipoParadaFila(this)">
+              <option value="Satélite / Taller">Satélite / Taller / Bodega</option>
+              <option value="Cliente Final">Cliente Final</option>
+              <option value="Insumos / Proveedor">Insumos / Proveedor / Otro</option>
+            </select>
+          </div>
+        </div>
+        <div style="margin-top: 8px;">
+          <label>Destino o Cliente / Satélite</label>
+          <select class="parada-destino-select">
+            <option value="Leidy Santos">Leidy Santos</option>
+            <option value="Richard Barrera">Richard Barrera</option>
+            <option value="Nohemi Galeano">Nohemi Galeano</option>
+            <option value="Miryam">Miryam</option>
+            <option value="Camilo Maceto">Camilo Maceto</option>
+            <option value="Yadira">Yadira</option>
+            <option value="Amparo">Amparo</option>
+            <option value="Cecilia">Cecilia</option>
+            <option value="Brayan">Brayan</option>
+            <option value="Reinel Losada">Reinel Losada</option>
+            <option value="Bodega Cafa">🏢 Bodega Cafa</option>
+            <option value="Casa Grande">🏠 Bodega Casa Grande</option>
+          </select>
+          <input type="text" class="parada-destino-manual" placeholder="Escribe el nombre..." style="display:none; margin-top:4px;">
+        </div>
+        <div style="margin-top: 8px;" class="grid">
+          <div>
+            <label>Dirección exacta (Opcional)</label>
+            <input type="text" class="parada-direccion" placeholder="Ej. Calle 100 # 15-20">
+          </div>
+          <div class="grupo-factura" style="display:none;">
+            <label>Nro Factura Asociada</label>
+            <input type="text" class="parada-factura" placeholder="Ej. FAC-00123">
+          </div>
+        </div>
+        <div style="margin-top: 8px;" class="grupo-bolsas hidden">
+          <label>📦 Cantidad de Bolsas o Cajas</label>
+          <input type="text" class="parada-bolsas" placeholder="Ej. 2 cajas y 1 bolsa">
+        </div>
+        <div style="margin-top: 8px;">
+          <label>Instrucciones Específicas</label>
+          <textarea class="parada-instruccion" rows="2" placeholder="Ej: Recoger bodega trasera, revisar sellos..."></textarea>
+        </div>
+      </div>
+    `;
+    renderizarRutasCoordinador();
+  }
+
+  function renderizarRutasCoordinador() {
+    const fechaSel = document.getElementById('coordFecha').value;
+    const conductorSel = obtenerConductorSeleccionado('coordConductor', 'coordConductorManual');
+    let rutas = JSON.parse(localStorage.getItem('rutas_delegadas_arte') || '[]');
+    const contenedor = document.getElementById('listaTodasRutasCoord');
+
+    let misRutas = rutas.filter(r => r.conductor === conductorSel && r.fecha === fechaSel);
+    // Ordenar de menor a mayor según el número de orden asignado
+    misRutas.sort((a, b) => (a.orden || 1) - (b.orden || 1));
+
+    if (misRutas.length === 0) {
+      contenedor.innerHTML = '<p style="color: #64748b; text-align: center;">No hay paradas registradas para este conductor en esta fecha.</p>';
+      return;
+    }
+
+    let html = '';
+    misRutas.forEach(r => {
+      let detalleFactura = (r.factura && r.factura !== 'N/A') ? ` | <strong>Factura:</strong> ${r.factura}` : '';
+      let detalleBolsas = (r.bolsas && r.bolsas !== 'N/A') ? `<p style="margin: 4px 0; font-size: 0.85rem; color: #1d4ed8;">📦 <strong>Bolsas/Cajas:</strong> ${r.bolsas}</p>` : '';
+      let detalleDir = r.direccion ? `<p style="margin: 4px 0; font-size: 0.85rem; color: #475569;">📍 <strong>Dir:</strong> ${r.direccion}</p>` : '';
+      
+      html += `
+        <div class="route-card-item">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <strong>🔢 Parada #${r.orden || 1} — Conductor: ${r.conductor}</strong>
+            <span class="status-badge ${r.estado === 'Completado' ? 'completado' : ''}">${r.estado}</span>
+          </div>
+          <p style="margin: 4px 0; font-size: 0.9rem;"><strong>Tipo:</strong> ${r.tipo} | <strong>Destino:</strong> ${r.destino}${detalleFactura}</p>
+          ${detalleDir}
+          ${detalleBolsas}
+          <div class="instruccion-card-box">📝 <strong>Instrucciones:</strong> ${r.instruccion}</div>
+          <div style="text-align: right; margin-top: 6px;">
+            <button class="btn" style="padding: 4px 10px; font-size: 0.8rem; background: #fee2e2; color: #dc2626;" onclick="eliminarRutaCoord(${r.id})">Eliminar</button>
+          </div>
+        </div>
+      `;
+    });
+    contenedor.innerHTML = html;
+  }
+
+  function eliminarRutaCoord(id) {
+    if (!confirm('¿Estás seguro de eliminar esta parada?')) return;
+    let rutas = JSON.parse(localStorage.getItem('rutas_delegadas_arte') || '[]');
+    rutas = rutas.filter(r => r.id !== id);
+    localStorage.setItem('rutas_delegadas_arte', JSON.stringify(rutas));
+    renderizarRutasCoordinador();
+  }
+
+  // --- BANDEJA DE GESTIÓN Y SUPERVISIÓN ORDENADA ---
+  function cargarRutasExclusivas() {
+    if (!sesionActual) return;
+
+    let conductorAVisualizar = sesionActual;
+    if (esAdmin) {
+      conductorAVisualizar = document.getElementById('selectConductorAdmin').value;
+    }
+
+    const fechaSel = document.getElementById('filtroFechaEntrega').value;
+    const contenedor = document.getElementById('contenedorRutasConductor');
+
+    let rutas = JSON.parse(localStorage.getItem('rutas_delegadas_arte') || '[]');
+    let misRutas = rutas.filter(r => r.conductor === conductorAVisualizar && (!fechaSel || r.fecha === fechaSel));
+    
+    // ORDENAR AUTOMÁTICAMENTE LA RUTA DEL CONDUCTOR DE MENOR A MAYOR (Parada 1, Parada 2...)
+    misRutas.sort((a, b) => (a.orden || 1) - (b.orden || 1));
+
+    if (misRutas.length === 0) {
+      contenedor.innerHTML = `<p style="text-align: center; color: var(--text-light); padding: 20px;">🔔 No hay paradas registradas para ${conductorAVisualizar} en esta fecha.</p>`;
+      return;
+    }
+
+    let html = '';
+    misRutas.forEach(r => {
+      let detalleFactura = (r.factura && r.factura !== 'N/A') ? `<p style="margin: 4px 0; font-size: 0.9rem;"><strong>Factura:</strong> ${r.factura}</p>` : '';
+      let detalleBolsas = (r.bolsas && r.bolsas !== 'N/A') ? `<p style="margin: 4px 0; font-size: 0.9rem; color: #1d4ed8;">📦 <strong>Bolsas/Cajas:</strong> ${r.bolsas}</p>` : '';
+      
+      let botonMapsHtml = '';
+      if (r.direccion && r.direccion.trim() !== '') {
+        let linkMaps = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(r.direccion + ", Bogotá")}`;
+        botonMapsHtml = `
+          <div style="margin: 8px 0;">
+            <a href="${linkMaps}" target="_blank" class="btn" style="padding: 6px 10px; font-size: 0.8rem; text-decoration: none; background: #0284c7; color: white;">
+              🗺️ Abrir en Google Maps (${r.direccion})
+            </a>
+          </div>
+        `;
+      }
+
+      html += `
+        <div class="route-card-item">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <h3 style="margin:0; font-size:1.05rem; color:var(--primary);">🔢 Parada #${r.orden || 1}: ${r.destino}</h3>
+            <span class="status-badge ${r.estado === 'Completado' ? 'completado' : ''}">${r.estado}</span>
+          </div>
+          <p style="margin: 4px 0; font-size: 0.9rem;"><strong>Tipo:</strong> ${r.tipo}</p>
+          ${detalleFactura}
+          ${detalleBolsas}
+          
+          <div class="instruccion-card-box">
+            📝 <strong>Instrucciones a realizar:</strong><br>
+            ${r.instruccion}
+          </div>
+
+          ${botonMapsHtml}
+
+          ${r.novedad && r.novedad !== 'Asignado' ? `<p style="margin: 4px 0; font-size: 0.85rem; color: #b45309;"><strong>Reporte:</strong> ${r.novedad}</p>` : ''}
+          
+          <div style="margin-top: 10px; display: flex; gap: 8px;">
+            <button class="btn btn-green" style="flex:1; padding: 8px; font-size: 0.85rem;" onclick="actualizarEstadoRuta(${r.id}, 'Completado')">✅ Marcar Entregado / Terminado</button>
+            <button class="btn btn-wa" style="padding: 8px; font-size: 0.85rem;" onclick="reportarNovedadRuta(${r.id})">💬 Novedad WhatsApp</button>
+          </div>
+        </div>
+      `;
+    });
+    contenedor.innerHTML = html;
+  }
+
+  async function actualizarEstadoRuta(id, nuevoEstado) {
+    let rutas = JSON.parse(localStorage.getItem('rutas_delegadas_arte') || '[]');
+    let ruta = rutas.find(r => r.id === id);
+    if (!ruta) return;
+
+    alert('📍 Capturando ubicación satelital de entrega...');
+    const gpsEntrega = await obtenerUbicacionGPS();
+
+    ruta.estado = nuevoEstado;
+    ruta.novedad = 'Entregado con éxito';
+    ruta.gps = gpsEntrega;
+    localStorage.setItem('rutas_delegadas_arte', JSON.stringify(rutas));
+    cargarRutasExclusivas();
+
+    if (navigator.onLine && URL_SHEET_RUTAS && URL_SHEET_RUTAS.startsWith("http")) {
+      try {
+        await fetch(URL_SHEET_RUTAS, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: "actualizarEstado",
+            id: ruta.id,
+            estado: nuevoEstado,
+            novedad: 'Entregado con éxito',
+            gpsEntrega: gpsEntrega
+          })
+        });
+      } catch (err) {
+        console.error("Error al sincronizar entrega en la nube", err);
+      }
+    }
+
+    alert('✅ ¡Parada marcada como Entregada y ubicación enviada!');
+  }
+
+  function reportarNovedadRuta(id) {
+    let rutas = JSON.parse(localStorage.getItem('rutas_delegadas_arte') || '[]');
+    let ruta = rutas.find(r => r.id === id);
+    if (!ruta) return;
+
+    let detalleFactura = (ruta.factura && ruta.factura !== 'N/A') ? ` (Factura: ${ruta.factura})` : '';
+    let novedad = prompt(`Escribe la novedad o detalle para ${ruta.destino}${detalleFactura}:`, "Cliente ausente / Dirección cerrada");
+    if (novedad !== null) {
+      ruta.novedad = novedad;
+      ruta.estado = 'Con Novedad';
+      localStorage.setItem('rutas_delegadas_arte', JSON.stringify(rutas));
+      cargarRutasExclusivas();
+
+      let texto = `🚚 *NOVEDAD EN RUTA - ARTE DIDÁCTICA*\n`;
+      texto += `👤 *Conductor:* ${ruta.conductor}\n`;
+      texto += `📅 *Fecha:* ${ruta.fecha}\n`;
+      texto += `🏢 *Destino:* ${ruta.destino}\n`;
+      if (ruta.factura && ruta.factura !== 'N/A') texto += `📄 *Factura:* ${ruta.factura}\n`;
+      texto += `⚠️ *Novedad:* ${novedad}\n`;
+      window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`, '_blank');
+    }
+  }
+
+  // --- RECOGIDAS Y SINCRONIZACIÓN ---
+  function guardarEnHistorialLocal(registro) {
+    let historial = JSON.parse(localStorage.getItem('historial_recogidas_arte') || '[]');
+    historial.push(registro);
+    localStorage.setItem('historial_recogidas_arte', JSON.stringify(historial));
+  }
+
+  function actualizarEstadoConexion() {
+    const bar = document.getElementById('statusBar');
+    const txtCon = document.getElementById('txtConexion');
+    if (navigator.onLine) {
+      bar.className = 'status-bar online-mode';
+      txtCon.textContent = '🟢 Conectado';
+      sincronizarPendientes();
+    } else {
+      bar.className = 'status-bar offline-mode';
+      txtCon.textContent = '🟡 Modo Offline (Sin señal)';
+    }
+    actualizarBadgePendientes();
+  }
+  window.addEventListener('online', actualizarEstadoConexion);
+  window.addEventListener('offline', actualizarEstadoConexion);
+
+  function obtenerPendientes() {
+    return JSON.parse(localStorage.getItem('recogidas_offline_arte') || '[]');
+  }
+
+  function guardarPendienteLocal(payload) {
+    const pendientes = obtenerPendientes();
+    pendientes.push(payload);
+    localStorage.setItem('recogidas_offline_arte', JSON.stringify(pendientes));
+    actualizarBadgePendientes();
+  }
+
+  function actualizarBadgePendientes() {
+    const count = obtenerPendientes().length;
+    const badge = document.getElementById('txtSyncBadge');
+    badge.textContent = `📦 ${count} Pendientes por subir`;
+    badge.style.color = count > 0 ? '#b45309' : 'inherit';
+  }
+
+  async function sincronizarPendientes() {
+    if (!navigator.onLine) return;
+    const pendientes = obtenerPendientes();
+    if (pendientes.length === 0) return;
+
+    for (let i = 0; i < pendientes.length; i++) {
+      try {
+        await fetch(URL_SHEET_RECOGIDAS, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(pendientes[i])
+        });
+      } catch (e) {
+        return;
+      }
+    }
+    localStorage.removeItem('recogidas_offline_arte');
+    actualizarBadgePendientes();
+  }
+
+  function toggleManualInput(selectElem, inputId) {
+    const input = document.getElementById(inputId);
+    if (selectElem.value === '__OTRO__') {
+      input.style.display = 'block';
+      input.focus();
+    } else {
+      input.style.display = 'none';
+      input.value = '';
+    }
+  }
+
+  function cambioSatelite(valor) {
+    toggleManualInput(document.getElementById('sateliteSelect'), 'sateliteManual');
+    const entregaInput = document.getElementById('personaEntrega');
+    const etiqueta = document.getElementById('etiquetaTaller');
+    const labelPersona = document.getElementById('labelPersonaEntrega');
+
+    if (valor !== '__OTRO__') {
+      sateliteActual = valor;
+      etiqueta.textContent = valor;
+      if (valor === 'Casa Grande' || valor === 'Bodega Cafa') {
+        labelPersona.textContent = `Persona que Recibe en ${valor}`;
+        entregaInput.value = '';
+        entregaInput.placeholder = 'Nombre del encargado en bodega';
+      } else {
+        labelPersona.textContent = 'Persona que Entrega en Taller';
+        entregaInput.value = valor;
+        entregaInput.placeholder = 'Nombre de quien entrega físicamente';
+      }
+    } else {
+      sateliteActual = 'Otro Satélite';
+      entregaInput.value = '';
+      etiqueta.textContent = 'Nuevo Satélite';
+      labelPersona.textContent = 'Persona que Entrega / Recibe';
+    }
+
+    cargarCatalogoSatelite();
+    renderTabla();
+  }
+
+  function cargarCatalogoSatelite() {
+    catalogosPorSatelite = obtenerCatalogosGuardados();
+    const lista = catalogosPorSatelite[sateliteActual] || [];
+    renderCatalogo(lista);
+    document.getElementById('filtroCatalogo').value = '';
+  }
+
+  function renderCatalogo(items) {
+    const cont = document.getElementById('contenedorCatalogo');
+    cont.innerHTML = '';
+    if (items.length === 0) {
+      cont.innerHTML = '<div style="color:#94a3b8; padding:12px; text-align:center;">No hay productos en este catálogo. Agrega uno abajo.</div>';
+      return;
+    }
+    items.forEach((prod) => {
+      const div = document.createElement('div');
+      div.className = 'item-chip';
+      div.innerHTML = `
+        <div style="display:flex; align-items:center; gap:8px; flex:1; min-width:0;">
+          <span class="ref-badge">${prod.codigo}</span>
+          <strong style="font-size:0.9rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${prod.nombre}</strong>
+        </div>
+        <div style="display:flex; gap:8px; flex-shrink:0;">
+          <button class="btn btn-green" style="padding:6px 14px; font-size:0.85rem;" onclick="agregarDirecto('${prod.codigo}', '${prod.nombre.replace(/'/g, "\\'")}', 1)">+ Añadir</button>
+          <button class="btn" style="padding:6px 10px; font-size:0.85rem; background:#fee2e2; color:#dc2626; border:1px solid #fca5a5;" title="Quitar" onclick="eliminarDelCatalogo('${prod.codigo}', '${prod.nombre.replace(/'/g, "\\'")}')">Quitar</button>
+        </div>
+      `;
+      cont.appendChild(div);
+    });
+  }
+
+  function filtrarCatalogo() {
+    const q = document.getElementById('filtroCatalogo').value.toLowerCase();
+    const lista = catalogosPorSatelite[sateliteActual] || [];
+    renderCatalogo(lista.filter(x => x.nombre.toLowerCase().includes(q) || x.codigo.toLowerCase().includes(q)));
+  }
+
+  function agregarPermanente() {
+    const inputCod = document.getElementById('inputProdCodigo');
+    const inputNom = document.getElementById('inputProdNombre');
+    const codigo = inputCod.value.trim().toUpperCase() || 'S/REF';
+    const nombre = inputNom.value.trim().toUpperCase();
+
+    if (!nombre) {
+      alert('Por favor escribe el nombre del producto.');
+      return;
+    }
+
+    let guardados = JSON.parse(localStorage.getItem('catalogos_satelites_arte') || '{}');
+    if (!guardados[sateliteActual]) guardados[sateliteActual] = [];
+    
+    let existe = guardados[sateliteActual].some(p => p.codigo === codigo && p.nombre === nombre);
+    if (!existe) {
+      guardados[sateliteActual].push({ codigo, nombre });
+      localStorage.setItem('catalogos_satelites_arte', JSON.stringify(guardados));
+    }
+
+    catalogosPorSatelite = obtenerCatalogosGuardados();
+    cargarCatalogoSatelite();
+    inputCod.value = '';
+    inputNom.value = '';
+    inputCod.focus();
+  }
+
+  function eliminarDelCatalogo(codigo, nombre) {
+    if (!confirm(`¿Estás seguro de quitar "${nombre}" del catálogo?`)) return;
+    let guardados = JSON.parse(localStorage.getItem('catalogos_satelites_arte') || '{}');
+    if (guardados[sateliteActual]) {
+      guardados[sateliteActual] = guardados[sateliteActual].filter(p => !(p.codigo === codigo && p.nombre === nombre));
+      localStorage.setItem('catalogos_satelites_arte', JSON.stringify(guardados));
+    }
+    cargarCatalogoSatelite();
+  }
+
+  function agregarDirecto(codigo, nombre, cantidad) {
+    const item = listaProductos.find(p => p.codigo === codigo && p.nombre === nombre);
+    if (item) {
+      item.cantidad += cantidad;
+    } else {
+      listaProductos.push({ codigo, nombre, cantidad });
+    }
+    renderTabla();
+  }
+
+  function actualizarCantidadDirecta(index, nuevoValor) {
+    const val = parseInt(nuevoValor);
+    if (isNaN(val) || val <= 0) {
+      quitarProducto(index);
+    } else {
+      listaProductos[index].cantidad = val;
+      renderTabla();
+    }
+  }
+
+  function cambiarCantidad(index, delta) {
+    listaProductos[index].cantidad += delta;
+    if (listaProductos[index].cantidad <= 0) {
+      quitarProducto(index);
+    } else {
+      renderTabla();
+    }
+  }
+
+  function quitarProducto(index) {
+    listaProductos.splice(index, 1);
+    renderTabla();
+  }
+
+  function renderTabla() {
+    const tbody = document.getElementById('cuerpoTabla');
+    if (listaProductos.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:20px;">No has añadido productos.</td></tr>`;
+      document.getElementById('contadorTotal').textContent = `0 unidades`;
+      return;
+    }
+    tbody.innerHTML = '';
+    let totalUnidades = 0;
+    listaProductos.forEach((p, i) => {
+      totalUnidades += p.cantidad;
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><span class="ref-badge">${p.codigo}</span></td>
+        <td><strong>${p.nombre}</strong></td>
+        <td style="text-align: center;">
+          <div style="display:flex; align-items:center; justify-content:center; gap:4px;">
+            <button class="btn-qty" onclick="cambiarCantidad(${i}, -1)">-</button>
+            <input type="number" class="input-qty-table" value="${p.cantidad}" min="1" onchange="actualizarCantidadDirecta(${i}, this.value)">
+            <button class="btn-qty" onclick="cambiarCantidad(${i}, 1)">+</button>
+          </div>
+        </td>
+        <td style="text-align: right;">
+          <button class="del-btn" onclick="quitarProducto(${i})">&times;</button>
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+    document.getElementById('contadorTotal').textContent = `${totalUnidades} unidades en total`;
+  }
+
+  function obtenerDatosRecogida() {
+    let conductor = document.getElementById('conductorSelect').value;
+    if (conductor === '__OTRO__') conductor = document.getElementById('conductorManual').value.trim();
+    let satelite = document.getElementById('sateliteSelect').value;
+    if (satelite === '__OTRO__') satelite = document.getElementById('sateliteManual').value.trim();
+
+    return {
+      remision: document.getElementById('badgeConsecutivo').textContent,
+      fecha: document.getElementById('fechaRecogida').value,
+      conductor: conductor,
+      satelite: satelite,
+      entrega: document.getElementById('personaEntrega').value.trim() || 'No especificado',
+      observaciones: document.getElementById('obs').value.trim() || 'Ninguna',
+      productos: listaProductos
+    };
+  }
+
+  function compartirPorWhatsApp() {
+    if (listaProductos.length === 0) {
+      alert('Debes añadir al menos un producto.');
+      return;
+    }
+    const d = obtenerDatosRecogida();
+    let texto = `🚚 *REMISIÓN ${d.remision} - ARTE DIDÁCTICA*\n`;
+    texto += `📅 *Fecha:* ${d.fecha}\n🏢 *Satélite:* ${d.satelite}\n🚛 *Conductor:* ${d.conductor}\n\n📦 *PRODUCTOS:* \n`;
+    d.productos.forEach(p => {
+      texto += `• [${p.codigo}] ${p.nombre}: *${p.cantidad} unidades*\n`;
+    });
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`, '_blank');
+  }
+
+  async function guardarRecogida() {
+    if (listaProductos.length === 0) {
+      alert('Debes añadir al menos un producto.');
+      return;
+    }
+    const payload = obtenerDatosRecogida();
+    const btn = document.getElementById('btnGuardar');
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+
+    guardarEnHistorialLocal(payload);
+
+    if (!navigator.onLine) {
+      guardarPendienteLocal(payload);
+      alert(`📶 Modo offline. Se guardó localmente.`);
+      confirmarConsecutivoUsado();
+      limpiarTodo();
+      btn.disabled = false;
+      btn.textContent = '💾 Guardar Registro';
+      return;
+    }
+
+    try {
+      await fetch(URL_SHEET_RECOGIDAS, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      alert(`✅ ¡Remisión ${payload.remision} guardada con éxito!`);
+      confirmarConsecutivoUsado();
+      limpiarTodo();
+    } catch (e) {
+      guardarPendienteLocal(payload);
+      alert('⚠️ Error de red. Guardado localmente.');
+      confirmarConsecutivoUsado();
+      limpiarTodo();
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '💾 Guardar Registro';
+    }
+  }
+
+  function limpiarTodo() {
+    listaProductos = [];
+    document.getElementById('obs').value = '';
+    renderTabla();
+  }
+
+  function abrirModalBalance() {
+    document.getElementById('modalBalance').style.display = 'flex';
+    generarBalanceRuta();
+  }
+
+  function cerrarModalBalance() {
+    document.getElementById('modalBalance').style.display = 'none';
+  }
+
+  function generarBalanceRuta() {
+    const fecha = document.getElementById('fechaFiltroBalance').value;
+    const historial = JSON.parse(localStorage.getItem('historial_recogidas_arte') || '[]');
+    const tbody = document.getElementById('cuerpoTablaBalance');
+    const registrosDia = historial.filter(r => r.fecha === fecha);
+
+    if (registrosDia.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:#94a3b8; padding:20px;">No hay movimientos.</td></tr>`;
+      return;
+    }
+
+    let rec = {}, ent = {}, infoProd = {}, prods = new Set();
+    registrosDia.forEach(r => {
+      const esBodega = (r.satelite === 'Casa Grande' || r.satelite === 'Bodega Cafa');
+      r.productos.forEach(p => {
+        const key = p.codigo + " - " + p.nombre.toUpperCase();
+        prods.add(key);
+        infoProd[key] = { codigo: p.codigo, nombre: p.nombre.toUpperCase() };
+        if (esBodega) ent[key] = (ent[key] || 0) + p.cantidad;
+        else rec[key] = (rec[key] || 0) + p.cantidad;
+      });
+    });
+
+    tbody.innerHTML = '';
+    Array.from(prods).sort().forEach(k => {
+      const pInfo = infoProd[k];
+      const rQty = rec[k] || 0, eQty = ent[k] || 0, dif = eQty - rQty;
+      let difHtml = dif === 0 && rQty > 0 ? '<span class="diff-ok">✓ Cuadrado</span>' : (dif < 0 ? `<span class="diff-warn">⚠️ Faltan ${Math.abs(dif)}</span>` : `+ Sobran ${dif}`);
+      tbody.innerHTML += `
+        <tr>
+          <td><span class="ref-badge">${pInfo.codigo}</span></td>
+          <td><strong>${pInfo.nombre}</strong></td>
+          <td style="text-align:center;">${rQty} un</td>
+          <td style="text-align:center; color:#1d4ed8; font-weight:700;">${eQty} un</td>
+          <td style="text-align:center;">${difHtml}</td>
+        </tr>`;
+    });
+  }
+
+  function compartirBalanceWhatsApp() {
+    const fecha = document.getElementById('fechaFiltroBalance').value;
+    const filas = document.querySelectorAll('#cuerpoTablaBalance tr');
+    let texto = `⚖️ *BALANCE DE RUTA - ARTE DIDÁCTICA*\n📅 *Fecha:* ${fecha}\n\n`;
+    filas.forEach(f => {
+      const c = f.querySelectorAll('td');
+      if (c.length >= 5) texto += `• [${c[0].innerText}] *${c[1].innerText}* | Rec: ${c[2].innerText} | Bodega: ${c[3].innerText} | ${c[4].innerText}\n`;
+    });
+    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`, '_blank');
+  }
+
+  cargarCatalogoSatelite();
+  actualizarEstadoConexion();
+  renderizarRutasCoordinador();
+</script>
+
+</body>
+</html>
